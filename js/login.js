@@ -1,5 +1,6 @@
 
-const AUTH_ENDPOINT = "http://localhost:8080/api/v1/auth/login";
+import { apiRequest } from "./api.js";
+
 const TOKEN_KEY = "token";
 
 const formulario = document.getElementById("formLogin");
@@ -24,32 +25,14 @@ formulario.addEventListener("submit", async evento => {
     botonLogin.textContent = "Ingresando...";
 
     try {
-        const respuesta = await fetch(AUTH_ENDPOINT, {
+        const resultado = await apiRequest("/auth/login", {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Accept": "application/json"
-            },
             body: JSON.stringify({
                 username: username,
-                "contraseña": password
+                contraseña: password
             })
         });
 
-      
-
-        const resultado = await respuesta.json().catch(() => null);
-        
-
-        if (!respuesta.ok) {
-            throw new Error(
-                resultado?.message ||
-                resultado?.error ||
-                `No se pudo iniciar sesión. HTTP ${respuesta.status}.`
-            );
-        }
-
-        // Según tu JwtResponseDto, el token viene en "token".
         if (
             typeof resultado?.token !== "string" ||
             !resultado.token.trim()
@@ -59,11 +42,8 @@ formulario.addEventListener("submit", async evento => {
             );
         }
 
-        // Guardamos el JWT para api.js.
-
         localStorage.setItem(TOKEN_KEY, resultado.token);
 
-        // Entramos al panel principal.
         window.location.replace("/");
 
     } catch (error) {
