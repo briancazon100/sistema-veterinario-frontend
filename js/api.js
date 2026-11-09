@@ -52,13 +52,17 @@ export async function apiRequest(ruta, opciones = {}) {
             // El backend puede no devolver un JSON de error.
         }
 
-        if (respuesta.status === 401) {
-            mensaje = "No estás autenticado o el JWT no es válido.";
-        }
+       if (respuesta.status === 401) {
+    mensaje = ruta === "/auth/login"
+        ? "Usuario o contraseña incorrectos."
+        : "No estás autenticado.";
+}
 
-        if (respuesta.status === 403) {
-            mensaje = "No tenés permisos para realizar esta operación.";
-        }
+if (respuesta.status === 403) {
+    mensaje = ruta === "/auth/login"
+        ? "Usuario o contraseña incorrectos."
+        : "No tenés permisos para realizar esta operación.";
+}
 
         throw new Error(mensaje);
     }
