@@ -32,6 +32,8 @@ formulario.addEventListener("submit", async evento => {
                 contraseña: password
             })
         });
+        console.log("RESPUESTA COMPLETA DEL LOGIN:", resultado);
+console.log("TOKEN RECIBIDO:", resultado?.token);
 
         if (
             typeof resultado?.token !== "string" ||
