@@ -1,23 +1,21 @@
+
 const API_BASE = "https://sistema-veterinario.onrender.com/api/v1";
-//restautar
 
 export async function apiRequest(ruta, opciones = {}) {
     const token = localStorage.getItem("token");
-
-    if (!token) {
-        throw new Error(
-            "No se encontró el JWT. Verificá cómo lo guarda tu login."
-        );
-    }
 
     const headers = new Headers(opciones.headers || {});
 
     headers.set("Accept", "application/json");
 
-    headers.set(
-        "Authorization",
-        token.startsWith("Bearer ") ? token : `Bearer ${token}`
-    );
+    // Adjuntar JWT solamente si existe.
+    // Login y registro no necesitan autenticación.
+    if (token) {
+        headers.set(
+            "Authorization",
+            token.startsWith("Bearer ") ? token : `Bearer ${token}`
+        );
+    }
 
     // Detectar si estamos enviando un archivo mediante FormData.
     const esFormData =
@@ -25,14 +23,11 @@ export async function apiRequest(ruta, opciones = {}) {
         opciones.body instanceof FormData;
 
     if (esFormData) {
-        // IMPORTANTE:
-        // El navegador debe establecer Content-Type y su boundary.
         headers.delete("Content-Type");
     } else if (
         opciones.body !== undefined &&
         opciones.body !== null
     ) {
-        // Para las peticiones JSON existentes.
         headers.set("Content-Type", "application/json");
     }
 
@@ -77,6 +72,7 @@ export async function apiRequest(ruta, opciones = {}) {
 
     return texto ? JSON.parse(texto) : null;
 }
+
 export function escaparHTML(valor) {
     return String(valor ?? "").replace(/[&<>"']/g, caracter => ({
         "&": "&amp;",
