@@ -459,6 +459,56 @@ async function cargarDatosIniciales() {
 // SELECT DE MASCOTAS
 // ==========================================
 
+function cargarSelectMascotas() {
+
+    const select = document.getElementById("mascotaTurno");
+
+    if (mascotasDisponibles.length === 0) {
+        select.innerHTML = `<option value="">No hay mascotas disponibles</option>`;
+        return;
+    }
+
+    select.innerHTML = `
+        <option value="">Seleccioná una mascota</option>
+
+        ${mascotasDisponibles.map(mascota => `
+            <option value="${obtenerIdMascota(mascota)}">
+                ${escaparHTML(nombreMascota(mascota))}
+            </option>
+        `).join("")}
+    `;
+}
+
+
+// ==========================================
+// SELECT DE VETERINARIOS
+// ==========================================
+
+function cargarSelectVeterinarios() {
+
+    const select = document.getElementById("veterinarioTurno");
+
+    if (veterinariosDisponibles.length === 0) {
+        select.innerHTML = `<option value="">No hay veterinarios disponibles</option>`;
+        return;
+    }
+
+    select.innerHTML = `
+        <option value="">Seleccioná un veterinario</option>
+
+        ${veterinariosDisponibles.map(veterinario => `
+            <option value="${obtenerIdVeterinario(veterinario)}">
+                ${escaparHTML(nombreVeterinario(veterinario))}
+            </option>
+        `).join("")}
+    `;
+}
+
+
+// ==========================================
+// REGISTRAR TURNO
+// ==========================================
+
 function configurarFormularioTurno() {
 
     const formulario = document.getElementById("formCrearTurno");
@@ -511,104 +561,6 @@ function configurarFormularioTurno() {
 
             await cargarListaTurnos();
             await cargarHistorialTurnos(0);
-
-        } catch (error) {
-
-            console.error("Error al registrar turno:", error);
-
-            mostrarMensajeTurnos(
-                error.message || "No se pudo registrar el turno.",
-                "danger"
-            );
-
-        } finally {
-
-            boton.disabled = false;
-            boton.innerHTML = `
-                <i class="bi bi-calendar-plus me-1"></i>
-                Registrar turno
-            `;
-        }
-    });
-}
-
-
-// ==========================================
-// SELECT DE VETERINARIOS
-// ==========================================
-
-function cargarSelectVeterinarios() {
-
-    const select = document.getElementById("veterinarioTurno");
-
-    if (veterinariosDisponibles.length === 0) {
-        select.innerHTML = `<option value="">No hay veterinarios disponibles</option>`;
-        return;
-    }
-
-    select.innerHTML = `
-        <option value="">Seleccioná un veterinario</option>
-
-        ${veterinariosDisponibles.map(veterinario => `
-            <option value="${obtenerIdVeterinario(veterinario)}">
-                ${escaparHTML(nombreVeterinario(veterinario))}
-            </option>
-        `).join("")}
-    `;
-}
-
-
-// ==========================================
-// REGISTRAR TURNO
-// ==========================================
-
-function configurarFormularioTurno() {
-
-    const formulario = document.getElementById("formCrearTurno");
-
-    formulario.addEventListener("submit", async (evento) => {
-
-        evento.preventDefault();
-
-        const fechaHora = document.getElementById("fechaHoraTurno").value;
-        const motivo = document.getElementById("motivoTurno").value.trim();
-        const mascotaId = document.getElementById("mascotaTurno").value;
-        const veterinarioId = document.getElementById("veterinarioTurno").value;
-
-        if (!fechaHora || !motivo || !mascotaId || !veterinarioId) {
-            mostrarMensajeTurnos("Completá todos los campos.", "warning");
-            return;
-        }
-
-        const turno = {
-            fechaHora: fechaHora,
-            motivo: motivo,
-            mascotaId: Number(mascotaId),
-            veterinarioId: Number(veterinarioId)
-        };
-
-        const boton = document.getElementById("btnGuardarTurno");
-
-        boton.disabled = true;
-        boton.innerHTML = `
-            <span class="spinner-border spinner-border-sm me-1"></span>
-            Guardando...
-        `;
-
-        try {
-
-            await apiRequest("/turnos", {
-                method: "POST",
-                body: JSON.stringify(turno)
-            });
-
-            mostrarMensajeTurnos("Turno registrado correctamente.", "success");
-
-            formulario.reset();
-            establecerFechaMinima();
-
-            await cargarListaTurnos();
-await cargarHistorialTurnos(0);
 
         } catch (error) {
 
