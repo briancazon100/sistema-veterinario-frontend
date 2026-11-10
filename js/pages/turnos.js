@@ -459,24 +459,77 @@ async function cargarDatosIniciales() {
 // SELECT DE MASCOTAS
 // ==========================================
 
-function cargarSelectMascotas() {
+function configurarFormularioTurno() {
 
-    const select = document.getElementById("mascotaTurno");
+    const formulario = document.getElementById("formCrearTurno");
 
-    if (mascotasDisponibles.length === 0) {
-        select.innerHTML = `<option value="">No hay mascotas disponibles</option>`;
-        return;
-    }
+    // Actualizar la fecha mínima cada vez que se selecciona el campo.
+    const campoFechaHora = document.getElementById("fechaHoraTurno");
 
-    select.innerHTML = `
-        <option value="">Seleccioná una mascota</option>
+    campoFechaHora.addEventListener("focus", establecerFechaMinima);
 
-        ${mascotasDisponibles.map(mascota => `
-            <option value="${obtenerIdMascota(mascota)}">
-                ${escaparHTML(nombreMascota(mascota))}
-            </option>
-        `).join("")}
-    `;
+    formulario.addEventListener("submit", async (evento) => {
+
+        evento.preventDefault();
+
+        const fechaHora = document.getElementById("fechaHoraTurno").value;
+        const motivo = document.getElementById("motivoTurno").value.trim();
+        const mascotaId = document.getElementById("mascotaTurno").value;
+        const veterinarioId = document.getElementById("veterinarioTurno").value;
+
+        if (!fechaHora || !motivo || !mascotaId || !veterinarioId) {
+            mostrarMensajeTurnos("Completá todos los campos.", "warning");
+            return;
+        }
+
+        const turno = {
+            fechaHora: fechaHora,
+            motivo: motivo,
+            mascotaId: Number(mascotaId),
+            veterinarioId: Number(veterinarioId)
+        };
+
+        const boton = document.getElementById("btnGuardarTurno");
+
+        boton.disabled = true;
+        boton.innerHTML = `
+            <span class="spinner-border spinner-border-sm me-1"></span>
+            Guardando...
+        `;
+
+        try {
+
+            await apiRequest("/turnos", {
+                method: "POST",
+                body: JSON.stringify(turno)
+            });
+
+            mostrarMensajeTurnos("Turno registrado correctamente.", "success");
+
+            formulario.reset();
+            establecerFechaMinima();
+
+            await cargarListaTurnos();
+            await cargarHistorialTurnos(0);
+
+        } catch (error) {
+
+            console.error("Error al registrar turno:", error);
+
+            mostrarMensajeTurnos(
+                error.message || "No se pudo registrar el turno.",
+                "danger"
+            );
+
+        } finally {
+
+            boton.disabled = false;
+            boton.innerHTML = `
+                <i class="bi bi-calendar-plus me-1"></i>
+                Registrar turno
+            `;
+        }
+    });
 }
 
 
@@ -1215,16 +1268,27 @@ function nombreVeterinario(veterinario) {
 // FECHA MÍNIMA DEL FORMULARIO
 // ==========================================
 
+
 function establecerFechaMinima() {
 
     const campo = document.getElementById("fechaHoraTurno");
 
-    // Genera una fecha local para evitar diferencias de zona horaria.
     const ahora = new Date();
-    ahora.setMinutes(ahora.getMinutes() - ahora.getTimezoneOffset());
 
-    campo.min = ahora.toISOString().slice(0, 16);
+    // Redondear al próximo minuto para evitar seleccionar
+    // una hora que ya pasó por cuestión de segundos.
+    ahora.setSeconds(0, 0);
+    ahora.setMinutes(ahora.getMinutes() + 1);
+
+    const pad = valor => String(valor).padStart(2, "0");
+
+    const fechaMinima =
+        `${ahora.getFullYear()}-${pad(ahora.getMonth() + 1)}-${pad(ahora.getDate())}` +
+        `T${pad(ahora.getHours())}:${pad(ahora.getMinutes())}`;
+
+    campo.min = fechaMinima;
 }
+
 
 
 // ==========================================
