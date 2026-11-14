@@ -609,3 +609,23 @@ body {
         width: calc(100vw - 30px);
     }
 }
+/* BOTÓN DE ACCESO AL PERFIL */
+
+.topbar-user {
+    border: none;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    font-family: inherit;
+    text-align: left;
+}
+
+.topbar-user:hover .user-avatar {
+    background: #99f6e4;
+}
+
+.topbar-user:focus-visible {
+    outline: 2px solid var(--accent-color);
+    outline-offset: 4px;
+    border-radius: 8px;
+}

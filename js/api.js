@@ -2,6 +2,7 @@
 const API_BASE = "https://sistema-veterinario.onrender.com/api/v1";
 
 export async function apiRequest(ruta, opciones = {}) {
+
     const token = localStorage.getItem("token");
 
     const headers = new Headers(opciones.headers || {});
@@ -9,12 +10,13 @@ export async function apiRequest(ruta, opciones = {}) {
     headers.set("Accept", "application/json");
 
     // Adjuntar JWT solamente si existe.
-    // Login y registro no necesitan autenticación.
     if (token) {
+
         headers.set(
             "Authorization",
             token.startsWith("Bearer ") ? token : `Bearer ${token}`
         );
+
     }
 
     // Detectar si estamos enviando un archivo mediante FormData.
@@ -23,12 +25,16 @@ export async function apiRequest(ruta, opciones = {}) {
         opciones.body instanceof FormData;
 
     if (esFormData) {
+
         headers.delete("Content-Type");
+
     } else if (
         opciones.body !== undefined &&
         opciones.body !== null
     ) {
+
         headers.set("Content-Type", "application/json");
+
     }
 
     const respuesta = await fetch(`${API_BASE}${ruta}`, {
@@ -36,10 +42,17 @@ export async function apiRequest(ruta, opciones = {}) {
         headers
     });
 
+
+    // ==========================================
+    // MANEJO DE ERRORES HTTP
+    // ==========================================
+
     if (!respuesta.ok) {
+
         let mensaje = `Error HTTP ${respuesta.status}`;
 
         try {
+
             const error = await respuesta.json();
 
             mensaje =
@@ -49,48 +62,79 @@ export async function apiRequest(ruta, opciones = {}) {
                 mensaje;
 
         } catch {
-            // El backend puede no devolver un JSON de error.
+            // El backend puede no devolver JSON.
         }
 
-       if (respuesta.status === 401) {
-    mensaje = ruta === "/auth/login"
-        ? "Usuario o contraseña incorrectos."
-        : "No estás autenticado.";
-}
+        if (respuesta.status === 401) {
 
-if (respuesta.status === 403) {
-    mensaje = ruta === "/auth/login"
-        ? "Usuario o contraseña incorrectos."
-        : "No tenés permisos para realizar esta operación.";
-}
+            mensaje = ruta === "/auth/login"
+                ? "Usuario o contraseña incorrectos."
+                : "No estás autenticado.";
+
+        }
+
+        if (respuesta.status === 403) {
+
+            mensaje = ruta === "/auth/login"
+                ? "Usuario o contraseña incorrectos."
+                : "No tenés permisos para realizar esta operación.";
+
+        }
 
         throw new Error(mensaje);
+
     }
 
-    // DELETE puede responder HTTP 204 sin contenido.
+
+    // ==========================================
+    // RESPUESTAS SIN CONTENIDO
+    // ==========================================
+
+    // DELETE puede responder HTTP 204.
     if (respuesta.status === 204) {
         return null;
     }
 
+
+    // ==========================================
+    // LEER RESPUESTA DEL SERVIDOR
+    // ==========================================
+
     const texto = await respuesta.text();
 
-if (!texto) {
-    return null;
+    if (!texto) {
+        return null;
+    }
+
+    // Si es JSON, devolver objeto.
+    // Si es texto plano, devolver el texto.
+    try {
+
+        return JSON.parse(texto);
+
+    } catch {
+
+        return texto;
+
+    }
+
 }
 
-try {
-    return JSON.parse(texto);
-} catch {
-    return texto;
-}
-}
+
+// ==========================================
+// ESCAPAR HTML
+// ==========================================
 
 export function escaparHTML(valor) {
+
     return String(valor ?? "").replace(/[&<>"']/g, caracter => ({
+
         "&": "&amp;",
         "<": "&lt;",
         ">": "&gt;",
         '"': "&quot;",
         "'": "&#39;"
+
     })[caracter]);
+
 }

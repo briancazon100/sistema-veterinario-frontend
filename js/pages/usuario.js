@@ -1,132 +1,313 @@
 
 import { apiRequest, escaparHTML } from "../api.js";
 
-// Usuario actualmente autenticado.
 let usuarioActual = null;
 
 // ==========================================
-// INICIALIZAR PANEL DE USUARIO
+// VISTA PRINCIPAL
 // ==========================================
 
-export function inicializarPanelUsuario() {
+export function mostrarUsuario() {
 
-    const botonPerfil = document.getElementById("btnPerfilUsuario");
-    const panel = document.getElementById("panelPerfilUsuario");
+    return `
+        <div class="page-heading">
 
-    if (!botonPerfil || !panel) {
-        console.error("No se encontró el panel de usuario.");
-        return;
-    }
+            <div>
+                <h1>Mi cuenta</h1>
 
-    // ABRIR Y CERRAR PANEL
-    botonPerfil.addEventListener("click", async () => {
+                <p class="page-subtitle">
+                    Consultá tu información personal y administrá las cuentas del sistema.
+                </p>
+            </div>
 
-        const abrir = panel.hidden;
+            <button
+                type="button"
+                class="btn btn-outline-secondary"
+                id="btnVolverUsuario">
 
-        panel.hidden = !abrir;
+                <i class="bi bi-arrow-left me-1"></i>
+                Volver
 
-        botonPerfil.setAttribute(
-            "aria-expanded",
-            String(abrir)
-        );
+            </button>
 
-        if (abrir) {
-            await cargarDatosUsuario();
-        }
-    });
+        </div>
 
-    // CERRAR AL HACER CLIC FUERA
-    document.addEventListener("click", evento => {
+        <div id="mensajePerfil"></div>
 
-        if (panel.hidden) return;
+        <!-- INFORMACIÓN PERSONAL -->
+        <div class="content-card mb-4">
 
-        if (
-            !panel.contains(evento.target) &&
-            !botonPerfil.contains(evento.target)
-        ) {
-            cerrarPanel();
-        }
-    });
+            <div class="content-card-header">
+                <h2 class="h5 mb-0">
+                    <i class="bi bi-person-circle me-2"></i>
+                    Información personal
+                </h2>
+            </div>
 
-    // CERRAR CON ESCAPE
-    document.addEventListener("keydown", evento => {
+            <div class="content-card-body">
 
-        if (evento.key === "Escape" && !panel.hidden) {
-            cerrarPanel();
-        }
-    });
+                <div id="datosPerfilUsuario">
 
-    // CREAR USUARIO
+                    <div class="text-center py-3 text-secondary">
+                        <span class="spinner-border spinner-border-sm me-2"></span>
+                        Cargando información...
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- ADMINISTRACIÓN DE USUARIOS -->
+        <section id="panelAdministracionUsuarios" hidden>
+
+            <div class="page-heading mb-3">
+                <div>
+                    <h2 class="h4">Gestión de usuarios</h2>
+
+                    <p class="page-subtitle">
+                        Creá nuevas cuentas y administrá los usuarios del sistema.
+                    </p>
+                </div>
+            </div>
+
+            <div id="mensajeUsuarios"></div>
+
+            <div class="row g-4">
+
+                <!-- FORMULARIO DE CREACIÓN -->
+                <div class="col-12 col-lg-4">
+
+                    <div class="content-card h-100">
+
+                        <div class="content-card-header">
+                            <h3 class="h5 mb-0">
+                                <i class="bi bi-person-plus me-2"></i>
+                                Crear usuario
+                            </h3>
+                        </div>
+
+                        <div class="content-card-body">
+
+                            <form id="formCrearUsuario">
+
+                                <div class="mb-3">
+
+                                    <label
+                                        for="nuevoUsername"
+                                        class="form-label">
+
+                                        Nombre de usuario
+
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        class="form-control"
+                                        id="nuevoUsername"
+                                        required>
+
+                                </div>
+
+                                <div class="mb-3">
+
+                                    <label
+                                        for="nuevaContraseña"
+                                        class="form-label">
+
+                                        Contraseña inicial
+
+                                    </label>
+
+                                    <input
+                                        type="password"
+                                        class="form-control"
+                                        id="nuevaContraseña"
+                                        required>
+
+                                </div>
+
+                                <div class="alert alert-light small">
+                                    <i class="bi bi-info-circle me-1"></i>
+
+                                    La cuenta se creará automáticamente con el rol USER.
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    class="btn btn-primary w-100"
+                                    id="btnCrearUsuario">
+
+                                    <i class="bi bi-person-plus me-1"></i>
+                                    Crear usuario
+
+                                </button>
+
+                            </form>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- LISTADO DE USUARIOS -->
+                <div class="col-12 col-lg-8">
+
+                    <div class="content-card">
+
+                        <div class="content-card-header
+                                    d-flex justify-content-between
+                                    align-items-center">
+
+                            <h3 class="h5 mb-0">
+                                Usuarios activos
+                            </h3>
+
+                            <button
+                                type="button"
+                                class="btn btn-outline-secondary btn-sm"
+                                id="btnActualizarUsuarios">
+
+                                <i class="bi bi-arrow-clockwise me-1"></i>
+                                Actualizar
+
+                            </button>
+
+                        </div>
+
+                        <div class="content-card-body">
+
+                            <div class="table-responsive">
+
+                                <table class="table table-hover align-middle">
+
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Usuario</th>
+                                            <th>Rol</th>
+                                            <th>Estado</th>
+                                            <th>Acciones</th>
+                                        </tr>
+                                    </thead>
+
+                                    <tbody id="tablaUsuarios">
+
+                                        <tr>
+                                            <td colspan="4"
+                                                class="text-center text-secondary py-4">
+
+                                                Cargando usuarios...
+
+                                            </td>
+                                        </tr>
+
+                                    </tbody>
+
+                                </table>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+    `;
+}
+
+
+// ==========================================
+// INICIALIZACIÓN
+// ==========================================
+
+export async function inicializarUsuario(volver) {
+
+    // Volver a la pantalla anterior.
+    document.getElementById("btnVolverUsuario")
+        .addEventListener("click", volver);
+
+    // Crear usuario.
     document.getElementById("formCrearUsuario")
-        ?.addEventListener("submit", crearUsuario);
+        .addEventListener("submit", crearUsuario);
 
-    // ACTUALIZAR LISTADO
+    // Actualizar listado.
     document.getElementById("btnActualizarUsuarios")
-        ?.addEventListener("click", cargarUsuariosActivos);
+        .addEventListener("click", cargarUsuariosActivos);
 
-    // DESACTIVAR USUARIO
-    document.getElementById("listaUsuarios")
-        ?.addEventListener("click", async evento => {
+    // Delegación de eventos para desactivar usuarios.
+    document.getElementById("tablaUsuarios")
+        .addEventListener("click", async evento => {
 
-            if (!(evento.target instanceof Element)) return;
+            if (!(evento.target instanceof Element)) {
+                return;
+            }
 
             const boton = evento.target.closest(
                 '[data-accion="desactivar"]'
             );
 
-            if (!boton) return;
+            if (!boton) {
+                return;
+            }
 
-            await desactivarUsuario(boton.dataset.usuarioId);
+            await desactivarUsuario(boton.dataset.usuarioId, boton);
+
         });
+
+    // Consultar perfil al entrar a la pantalla.
+    await cargarPerfil();
 }
 
 
 // ==========================================
-// CERRAR PANEL
-// ==========================================
-
-function cerrarPanel() {
-
-    const panel = document.getElementById("panelPerfilUsuario");
-    const boton = document.getElementById("btnPerfilUsuario");
-
-    panel.hidden = true;
-
-    boton.setAttribute("aria-expanded", "false");
-}
-
-
-// ==========================================
-// OBTENER ROL
+// OBTENER NOMBRE DEL ROL
 // ==========================================
 
 function obtenerNombreRol(rol) {
 
-    if (typeof rol === "string") {
-        return rol;
-    }
+    const nombre = typeof rol === "string"
+        ? rol
+        : rol?.nombre;
 
-    return rol?.nombre ?? "Sin rol";
+    return nombre || "Sin rol";
 }
 
+function formatearRol(rol) {
 
-// ==========================================
-// COMPROBAR SI ES ADMIN
-// ==========================================
+    return obtenerNombreRol(rol)
+        .replace(/^ROLE_/, "");
+}
 
 function esAdministrador(rol) {
 
-    const nombre = obtenerNombreRol(rol).toUpperCase();
-
-    return nombre === "ADMIN" || nombre === "ROLE_ADMIN";
+    return obtenerNombreRol(rol).toUpperCase() === "ROLE_ADMIN";
 }
 
 
 // ==========================================
-// CARGAR INFORMACIÓN DEL USUARIO
+// CARGAR INFORMACIÓN DEL PERFIL
 // ==========================================
 
-async function cargarDatosUsuario() {
+async function cargarPerfil() {
+
+    const contenedor = document.getElementById("datosPerfilUsuario");
+    const panelAdmin = document.getElementById("panelAdministracionUsuarios");
+
+    usuarioActual = null;
+    panelAdmin.hidden = true;
+
+    contenedor.innerHTML = `
+        <div class="text-center py-3 text-secondary">
+            <span class="spinner-border spinner-border-sm me-2"></span>
+            Cargando información...
+        </div>
+    `;
 
     try {
 
@@ -134,14 +315,41 @@ async function cargarDatosUsuario() {
 
         usuarioActual = usuario;
 
-        document.getElementById("perfilUsername").textContent =
-            usuario.username ?? "Sin username";
+        contenedor.innerHTML = `
 
-        document.getElementById("perfilRol").textContent =
-            obtenerNombreRol(usuario.rol);
+            <div class="d-flex flex-wrap align-items-center gap-3">
 
-        // Mantener compatibilidad si todavía existen
-        // los elementos anteriores del topbar.
+                <div class="user-avatar"
+                     style="width:60px;height:60px;font-size:28px;">
+
+                    <i class="bi bi-person-fill"></i>
+
+                </div>
+
+                <div>
+
+                    <h3 class="h5 mb-1">
+                        ${escaparHTML(usuario.username)}
+                    </h3>
+
+                    <span class="badge ${
+                        esAdministrador(usuario.rol)
+                            ? "text-bg-primary"
+                            : "text-bg-secondary"
+                    }">
+
+                        ${escaparHTML(formatearRol(usuario.rol))}
+
+                    </span>
+
+                </div>
+
+            </div>
+
+        `;
+
+        // También actualizar el nombre y rol en el navbar,
+        // si los elementos anteriores todavía existen.
         const usernameTopbar = document.getElementById("usuarioUsername");
         const rolTopbar = document.getElementById("usuarioRol");
 
@@ -150,34 +358,26 @@ async function cargarDatosUsuario() {
         }
 
         if (rolTopbar) {
-            rolTopbar.textContent = obtenerNombreRol(usuario.rol);
+            rolTopbar.textContent = formatearRol(usuario.rol);
         }
 
-        const seccionAdmin = document.getElementById(
-            "seccionAdminUsuarios"
-        );
+        // Mostrar gestión solamente para ADMIN.
+        if (esAdministrador(usuario.rol)) {
 
-        const esAdmin = esAdministrador(usuario.rol);
+            panelAdmin.hidden = false;
 
-        seccionAdmin.hidden = !esAdmin;
-
-        if (esAdmin) {
             await cargarUsuariosActivos();
         }
 
     } catch (error) {
 
-        console.error("Error al cargar el usuario:", error);
+        console.error("Error al cargar el perfil:", error);
 
-        usuarioActual = null;
-
-        document.getElementById("perfilUsername").textContent =
-            "Usuario no disponible";
-
-        document.getElementById("perfilRol").textContent =
-            "No se pudo cargar la información";
-
-        document.getElementById("seccionAdminUsuarios").hidden = true;
+        contenedor.innerHTML = `
+            <div class="alert alert-danger mb-0">
+                ${escaparHTML(error.message || "No se pudo cargar tu perfil.")}
+            </div>
+        `;
     }
 }
 
@@ -188,17 +388,21 @@ async function cargarDatosUsuario() {
 
 async function cargarUsuariosActivos() {
 
-    const lista = document.getElementById("listaUsuarios");
+    const tabla = document.getElementById("tablaUsuarios");
 
     if (!usuarioActual || !esAdministrador(usuarioActual.rol)) {
         return;
     }
 
-    lista.innerHTML = `
-        <div class="text-center text-secondary py-3">
-            <span class="spinner-border spinner-border-sm me-2"></span>
-            Cargando usuarios...
-        </div>
+    tabla.innerHTML = `
+        <tr>
+            <td colspan="4" class="text-center py-4 text-secondary">
+
+                <span class="spinner-border spinner-border-sm me-2"></span>
+                Cargando usuarios...
+
+            </td>
+        </tr>
     `;
 
     try {
@@ -206,50 +410,57 @@ async function cargarUsuariosActivos() {
         const usuarios = await apiRequest("/auth/listarActivos");
 
         if (!Array.isArray(usuarios)) {
-            throw new Error("La API no devolvió una lista de usuarios válida.");
+            throw new Error("La API no devolvió una lista válida de usuarios.");
         }
 
         if (usuarios.length === 0) {
 
-            lista.innerHTML = `
-                <p class="text-secondary small text-center">
-                    No hay usuarios activos.
-                </p>
+            tabla.innerHTML = `
+                <tr>
+                    <td colspan="4" class="text-center text-secondary py-4">
+                        No hay usuarios activos.
+                    </td>
+                </tr>
             `;
 
             return;
         }
 
-        lista.innerHTML = usuarios.map(usuario => {
+        tabla.innerHTML = usuarios.map(usuario => {
 
             const esCuentaActual =
                 Number(usuario.id) === Number(usuarioActual.id);
 
             return `
-                <div class="d-flex justify-content-between align-items-center
-                            gap-2 py-3 border-bottom">
+                <tr>
 
-                    <div class="overflow-hidden">
-
-                        <strong class="d-block text-break">
+                    <td>
+                        <strong>
                             ${escaparHTML(usuario.username)}
                         </strong>
 
-                        <small class="text-secondary">
-                            ${escaparHTML(obtenerNombreRol(usuario.rol))}
-                        </small>
+                        ${
+                            esCuentaActual
+                                ? `<span class="badge text-bg-info ms-1">Tu cuenta</span>`
+                                : ""
+                        }
+                    </td>
 
-                    </div>
+                    <td>
+                        ${escaparHTML(formatearRol(usuario.rol))}
+                    </td>
 
-                    <div class="flex-shrink-0">
+                    <td>
+                        <span class="badge text-bg-success">
+                            Activo
+                        </span>
+                    </td>
+
+                    <td>
 
                         ${
                             esCuentaActual
-                                ? `
-                                    <span class="badge text-bg-primary">
-                                        Tu cuenta
-                                    </span>
-                                `
+                                ? `<span class="text-secondary small">—</span>`
                                 : `
                                     <button
                                         type="button"
@@ -264,9 +475,9 @@ async function cargarUsuariosActivos() {
                                 `
                         }
 
-                    </div>
+                    </td>
 
-                </div>
+                </tr>
             `;
 
         }).join("");
@@ -275,10 +486,12 @@ async function cargarUsuariosActivos() {
 
         console.error("Error al listar usuarios:", error);
 
-        lista.innerHTML = `
-            <div class="alert alert-danger small">
-                ${escaparHTML(error.message)}
-            </div>
+        tabla.innerHTML = `
+            <tr>
+                <td colspan="4" class="text-center text-danger py-4">
+                    ${escaparHTML(error.message || "No se pudieron cargar los usuarios.")}
+                </td>
+            </tr>
         `;
     }
 }
@@ -292,32 +505,33 @@ async function crearUsuario(evento) {
 
     evento.preventDefault();
 
-    const formulario = document.getElementById("formCrearUsuario");
+    if (!usuarioActual || !esAdministrador(usuarioActual.rol)) {
+        mostrarMensajeUsuarios("No tenés permisos para crear usuarios.", "danger");
+        return;
+    }
 
+    const formulario = document.getElementById("formCrearUsuario");
     const boton = document.getElementById("btnCrearUsuario");
 
     const username = document.getElementById("nuevoUsername")
         .value.trim();
 
-    const contraseña = document.getElementById("nuevaContraseña")
-        .value;
+    const contraseña = document.getElementById("nuevaContraseña").value;
 
-    const rolNombre = document.getElementById("nuevoRol").value;
-
-    if (!username || !contraseña || !rolNombre) {
+    if (!username || !contraseña) {
 
         mostrarMensajeUsuarios(
-            "Completá todos los campos.",
+            "Completá el nombre de usuario y la contraseña.",
             "warning"
         );
 
         return;
     }
 
+    // El backend asigna obligatoriamente ROLE_USER.
     const registro = {
-        username: username,
-        contraseña: contraseña,
-        rolNombre: rolNombre
+        username,
+        contraseña
     };
 
     boton.disabled = true;
@@ -368,15 +582,13 @@ async function crearUsuario(evento) {
 // DESACTIVAR USUARIO
 // ==========================================
 
-async function desactivarUsuario(id) {
+async function desactivarUsuario(id, boton) {
 
-    if (!id) {
+    if (!id || !usuarioActual) {
         return;
     }
 
-    const usuario = usuarioActual;
-
-    if (!usuario || Number(id) === Number(usuario.id)) {
+    if (Number(id) === Number(usuarioActual.id)) {
 
         mostrarMensajeUsuarios(
             "No podés desactivar tu propia cuenta.",
@@ -393,6 +605,8 @@ async function desactivarUsuario(id) {
     if (!confirmar) {
         return;
     }
+
+    boton.disabled = true;
 
     try {
 
@@ -418,6 +632,8 @@ async function desactivarUsuario(id) {
             error.message || "No se pudo desactivar el usuario.",
             "danger"
         );
+
+        boton.disabled = false;
     }
 }
 
@@ -439,7 +655,8 @@ function mostrarMensajeUsuarios(mensaje, tipo = "success") {
             <button
                 type="button"
                 class="btn-close"
-                data-bs-dismiss="alert">
+                data-bs-dismiss="alert"
+                aria-label="Cerrar">
             </button>
 
         </div>

@@ -122,137 +122,25 @@
             <div class="topbar-title">
                 Panel administrativo
             </div>
-<div class="topbar-user-container">
 
-    <button
-        type="button"
-        class="topbar-user"
-        id="btnPerfilUsuario"
-        aria-label="Abrir mi cuenta"
-        aria-expanded="false"
-        aria-controls="panelPerfilUsuario">
+            <button
+    type="button"
+    class="topbar-user"
+    id="btnPerfilUsuario"
+    aria-label="Abrir mi cuenta">
 
-        <span class="user-avatar">
-            <i class="bi bi-person-fill"></i>
-        </span>
-
-        <i class="bi bi-chevron-down ms-1"></i>
-    </button>
-
-    <div class="user-panel" id="panelPerfilUsuario" hidden>
-
-        <!-- INFORMACIÓN PERSONAL -->
-        <div class="user-panel-header">
-            <div class="user-avatar">
-                <i class="bi bi-person-fill"></i>
-            </div>
-
-            <div>
-                <strong id="perfilUsername">Cargando...</strong>
-                <small id="perfilRol" class="d-block text-secondary">
-                    ...
-                </small>
-            </div>
-        </div>
-
-        <div class="user-panel-section">
-            <h6><i class="bi bi-person-circle me-2"></i>Mi cuenta</h6>
-            <p class="text-secondary small mb-0">
-                Próximamente podrás modificar tu nombre de usuario
-                y contraseña desde aquí.
-            </p>
-        </div>
-
-        <!-- ADMINISTRACIÓN -->
-        <div id="seccionAdminUsuarios" hidden>
-
-            <hr>
-
-            <div class="user-panel-section">
-                <h6>
-                    <i class="bi bi-people me-2"></i>
-                    Administración de usuarios
-                </h6>
-            </div>
-
-            <div id="mensajeUsuarios"></div>
-
-            <!-- CREAR USUARIO -->
-            <div class="user-panel-section">
-                <h6 class="small fw-bold">Crear nuevo usuario</h6>
-
-                <form id="formCrearUsuario">
-
-                    <div class="mb-3">
-                        <label for="nuevoUsername" class="form-label">
-                            Nombre de usuario
-                        </label>
-                        <input
-                            type="text"
-                            class="form-control"
-                            id="nuevoUsername"
-                            required>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="nuevaContraseña" class="form-label">
-                            Contraseña inicial
-                        </label>
-                        <input
-                            type="password"
-                            class="form-control"
-                            id="nuevaContraseña"
-                            required>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="nuevoRol" class="form-label">
-                            Rol
-                        </label>
-                        <select class="form-select" id="nuevoRol" required>
-                            <option value="USER">USER</option>
-                            <option value="ADMIN">ADMIN</option>
-                        </select>
-                    </div>
-
-                    <button
-                        type="submit"
-                        class="btn btn-primary w-100"
-                        id="btnCrearUsuario">
-                        <i class="bi bi-person-plus me-1"></i>
-                        Crear usuario
-                    </button>
-
-                </form>
-            </div>
-
-            <hr>
-
-            <!-- LISTADO -->
-            <div class="user-panel-section">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h6 class="mb-0">Usuarios activos</h6>
-
-                    <button
-                        type="button"
-                        class="btn btn-sm btn-outline-secondary"
-                        id="btnActualizarUsuarios"
-                        aria-label="Actualizar usuarios">
-                        <i class="bi bi-arrow-clockwise"></i>
-                    </button>
-                </div>
-
-                <div id="listaUsuarios">
-                    <p class="text-secondary small">
-                        Abrí el panel para cargar los usuarios.
-                    </p>
-                </div>
-            </div>
-
-        </div>
-
+    <div class="user-avatar">
+        <i class="bi bi-person-fill"></i>
     </div>
-</div>
+
+    <div class="user-info">
+        <strong>Mi cuenta</strong>
+        <small>Perfil y gestión</small>
+    </div>
+
+    <i class="bi bi-chevron-down"></i>
+
+</button>
             <button id="btnCerrarSesion"
                     type="button"
                     class="btn btn-outline-secondary btn-sm ms-2">
