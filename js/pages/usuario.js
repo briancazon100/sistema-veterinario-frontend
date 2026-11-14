@@ -528,11 +528,11 @@ async function crearUsuario(evento) {
         return;
     }
 
-    // El backend asigna obligatoriamente ROLE_USER.
-    const registro = {
-        username,
-        contraseña
-    };
+   const registro = {
+    username,
+    contraseña,
+    rolNombre: "ROLE_USER"
+};
 
     boton.disabled = true;
 
