@@ -30,7 +30,7 @@ import {
     mostrarEstudios,
     inicializarEstudios
 } from "./pages/estudios.js";
-import { cargarDatosUsuario } from "./pages/usuario.js";
+import { inicializarPanelUsuario } from "./pages/usuario.js";
 
 
 
@@ -122,8 +122,8 @@ function iniciarApp() {
         window.location.replace("/login.html");
     });
 
-    navegarA("inicio");
-    cargarDatosUsuario();
+    inicializarPanelUsuario();
+navegarA("inicio");
 }
 
 // Comprobamos el token antes de inicializar el dashboard.

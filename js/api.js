@@ -74,7 +74,15 @@ if (respuesta.status === 403) {
 
     const texto = await respuesta.text();
 
-    return texto ? JSON.parse(texto) : null;
+if (!texto) {
+    return null;
+}
+
+try {
+    return JSON.parse(texto);
+} catch {
+    return texto;
+}
 }
 
 export function escaparHTML(valor) {
