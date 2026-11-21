@@ -629,3 +629,114 @@ body {
     outline-offset: 4px;
     border-radius: 8px;
 }
+
+/* ==========================================
+   AVATAR Y FOTO DE MASCOTA
+========================================== */
+
+.btn-outline-teal {
+    color: var(--accent-color);
+    border-color: var(--accent-color);
+    background-color: #ffffff;
+}
+
+.btn-outline-teal:hover,
+.btn-outline-teal:focus {
+    background-color: var(--accent-color);
+    border-color: var(--accent-color);
+    color: #ffffff;
+}
+
+.mascota-avatar-wrapper {
+    position: relative;
+    width: 112px;
+    height: 112px;
+    border-radius: 20px;
+    overflow: hidden;
+    flex-shrink: 0;
+    border: 2px solid #cbd5e1;
+    background-color: #f8fafc;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+}
+
+.mascota-avatar-clickable {
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.mascota-avatar-clickable:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.14);
+}
+
+.mascota-avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.mascota-avatar-zoom {
+    position: absolute;
+    right: 6px;
+    bottom: 6px;
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
+    background: rgba(15, 23, 42, 0.65);
+    color: #ffffff;
+    display: grid;
+    place-items: center;
+    font-size: 12px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.mascota-avatar-clickable:hover .mascota-avatar-zoom {
+    opacity: 1;
+}
+
+.mascota-avatar-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border-style: dashed;
+    border-color: #99f6e4;
+    background: linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%);
+    color: #0f766e;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.mascota-avatar-placeholder-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.75);
+    display: grid;
+    place-items: center;
+    font-size: 20px;
+}
+
+.mascota-tabla-thumb {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 1px solid #cbd5e1;
+}
+
+.mascota-tabla-thumb-placeholder {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: #ccfbf1;
+    color: #0f766e;
+    display: inline-grid;
+    place-items: center;
+    font-size: 15px;
+    flex-shrink: 0;
+}

@@ -310,6 +310,29 @@ async function cargarMascotas() {
 
 // CONSTRUIR LAS FILAS Y APLICAR LA BÚSQUEDA LOCAL
 
+function renderizarMiniaturaMascota(mascota) {
+    const url = typeof mascota.fotoUrl === "string" && mascota.fotoUrl.trim()
+        ? mascota.fotoUrl.trim()
+        : null;
+
+    if (url && (/^https?:\/\//i.test(url) || url.startsWith("/"))) {
+        return `
+            <img src="${escaparHTML(url)}"
+                 alt="${escaparHTML(mascota.nombre)}"
+                 class="mascota-tabla-thumb"
+                 onerror="this.outerHTML='<span class=\\'mascota-tabla-thumb-placeholder\\'><i class=\\'bi bi-heart-pulse\\'></i></span>'">
+        `;
+    }
+
+    return `
+        <span class="mascota-tabla-thumb-placeholder" aria-hidden="true">
+            <i class="bi bi-heart-pulse"></i>
+        </span>
+    `;
+}
+
+// CONSTRUIR LAS FILAS Y APLICAR LA BÚSQUEDA LOCAL
+
 function renderizarMascotas() {
     const tabla = document.getElementById("tablaMascotas");
 
@@ -362,7 +385,10 @@ function renderizarMascotas() {
         return `
             <tr>
                 <td>
-                    ${escaparHTML(mascota.nombre)}
+                    <div class="d-flex align-items-center gap-2">
+                        ${renderizarMiniaturaMascota(mascota)}
+                        <span class="fw-medium">${escaparHTML(mascota.nombre)}</span>
+                    </div>
                 </td>
 
                 <td>${escaparHTML(mascota.especie)}</td>
@@ -374,12 +400,12 @@ function renderizarMascotas() {
                 <td>${escaparHTML(propietario)}</td>
 
                 <td class="text-end text-nowrap">
-                  <button type="button"
+                    <button type="button"
                             class="btn btn-sm btn-outline-success me-1"
                             data-accion="ficha"
                             data-id="${escaparHTML(mascota.id)}"
                             title="Ver ficha sanitaria">
-                            <i class="bi bi-clipboard2-pulse"></i>
+                        <i class="bi bi-clipboard2-pulse"></i>
                     </button>
                     <button type="button"
                             class="btn btn-sm btn-outline-primary me-1"
@@ -609,16 +635,30 @@ export function inicializarMascotas() {
         renderizarMascotas();
     });
 
-    function abrirFicha(mascota) {
-    const appContent = document.getElementById("app-content");
+   function abrirFicha(mascota) {
+        const appContent = document.getElementById("app-content");
 
-    appContent.innerHTML = mostrarFichaMascota(mascota);
+        appContent.innerHTML = mostrarFichaMascota(mascota);
 
-    inicializarFichaMascota(mascota, () => {
-        appContent.innerHTML = mostrarMascotas();
-        inicializarMascotas();
-    });
-}
+        inicializarFichaMascota(
+            mascota,
+            () => {
+                appContent.innerHTML = mostrarMascotas();
+                inicializarMascotas();
+            },
+            mascotaActualizada => {
+                const indice = mascotas.findIndex(
+                    item => String(item.id) === String(mascotaActualizada.id)
+                );
+                if (indice !== -1) {
+                    mascotas[indice] = {
+                        ...mascotas[indice],
+                        ...mascotaActualizada
+                    };
+                }
+            }
+        );
+    }
 
     cargarMascotas();
 
