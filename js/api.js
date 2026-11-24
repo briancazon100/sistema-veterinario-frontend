@@ -1,5 +1,12 @@
-
 const API_BASE = "https://sistema-veterinario.onrender.com/api/v1";
+
+function redirigirALoginPorSesionVencida() {
+    localStorage.removeItem("token");
+
+    if (!window.location.pathname.endsWith("/login.html")) {
+        window.location.replace("/login.html");
+    }
+}
 
 export async function apiRequest(ruta, opciones = {}) {
 
@@ -65,19 +72,29 @@ export async function apiRequest(ruta, opciones = {}) {
             // El backend puede no devolver JSON.
         }
 
+        const esLogin = ruta === "/auth/login";
+
         if (respuesta.status === 401) {
 
-            mensaje = ruta === "/auth/login"
-                ? "Usuario o contraseña incorrectos."
-                : "No estás autenticado.";
+            if (esLogin) {
+                mensaje = "Usuario o contraseña incorrectos.";
+            } else {
+                redirigirALoginPorSesionVencida();
+                throw new Error("Tu sesión expiró. Redirigiendo al inicio de sesión...");
+            }
 
         }
 
         if (respuesta.status === 403) {
 
-            mensaje = ruta === "/auth/login"
-                ? "Usuario o contraseña incorrectos."
-                : "No tenés permisos para realizar esta operación.";
+            if (esLogin) {
+                mensaje = "Usuario o contraseña incorrectos.";
+            } else if (!token) {
+                redirigirALoginPorSesionVencida();
+                throw new Error("Tu sesión expiró. Redirigiendo al inicio de sesión...");
+            } else {
+                mensaje = "No tenés permisos para realizar esta operación.";
+            }
 
         }
 

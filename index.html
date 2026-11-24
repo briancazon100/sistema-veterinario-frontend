@@ -29,10 +29,16 @@
 
     <!-- SIDEBAR -->
     <aside class="sidebar" id="sidebar">
-
         <div class="sidebar-brand">
-            <i class="bi bi-heart-pulse-fill"></i>
-            <span>VetAdmin</span>
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-heart-pulse-fill"></i>
+                <span>VetAdmin</span>
+            </div>
+
+            <button type="button"
+                    class="btn-close btn-close-white sidebar-close d-md-none ms-auto"
+                    id="sidebarClose"
+                    aria-label="Cerrar menú"></button>
         </div>
 
         <div class="sidebar-section">MENÚ PRINCIPAL</div>
@@ -105,7 +111,8 @@
         </div>
 
     </aside>
-
+    <!-- FONDO OSCURO PARA CERRAR EL MENÚ EN MOBILE -->
+    <div class="sidebar-backdrop" id="sidebarBackdrop" aria-hidden="true"></div>
     <!-- CONTENIDO PRINCIPAL -->
     <div class="main-wrapper">
 
