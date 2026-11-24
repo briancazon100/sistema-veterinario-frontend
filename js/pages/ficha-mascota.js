@@ -1,6 +1,7 @@
 import { apiRequest, escaparHTML } from "../api.js";
 
 let veterinariosDisponibles = [];
+let vacunasActuales = [];
 let mascotaActual = null;
 let seccionActual = "vacunas";
 let onMascotaActualizadaCallback = null;
@@ -12,6 +13,14 @@ const FORMATOS_IMAGEN_PERMITIDOS = [
     "image/gif",
     "image/avif"
 ];
+
+function fechaActualLocal() {
+    const ahora = new Date();
+    ahora.setMinutes(
+        ahora.getMinutes() - ahora.getTimezoneOffset()
+    );
+    return ahora.toISOString().slice(0, 10);
+}
 
 function construirUrlFotoValida(fotoUrl) {
     if (typeof fotoUrl !== "string" || !fotoUrl.trim()) {
@@ -322,6 +331,91 @@ export function mostrarFichaMascota(mascota) {
             </div>
         </div>
 
+        <!-- MODAL: EDITAR VACUNA (SOLO NOMBRE Y FECHAS) -->
+        <div class="modal fade"
+             id="modalEditarVacuna"
+             tabindex="-1"
+             aria-hidden="true">
+
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+
+                    <div class="modal-header">
+                        <h5 class="modal-title">Editar vacuna</h5>
+
+                        <button type="button"
+                                class="btn-close"
+                                data-bs-dismiss="modal"
+                                aria-label="Cerrar"></button>
+                    </div>
+
+                    <form id="formEditarVacuna">
+                        <div class="modal-body">
+
+                            <input type="hidden" id="editarVacunaId">
+
+                            <div class="mb-3">
+                                <label for="editarNombreVacuna"
+                                       class="form-label">
+                                    Nombre de la vacuna *
+                                </label>
+
+                                <input type="text"
+                                       id="editarNombreVacuna"
+                                       class="form-control"
+                                       required>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="editarFechaAplicacionVacuna"
+                                       class="form-label">
+                                    Fecha de aplicación *
+                                </label>
+
+                                <input type="date"
+                                       id="editarFechaAplicacionVacuna"
+                                       class="form-control"
+                                       required>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="editarProximaDosisVacuna"
+                                       class="form-label">
+                                    Próxima dosis *
+                                </label>
+
+                                <input type="date"
+                                       id="editarProximaDosisVacuna"
+                                       class="form-control"
+                                       required>
+                            </div>
+
+                            <div class="form-text">
+                                Solo podés corregir el nombre y las fechas de este registro.
+                            </div>
+
+                            <div id="mensajeEditarVacuna" class="mt-3"></div>
+
+                        </div>
+
+                        <div class="modal-footer">
+                            <button type="button"
+                                    class="btn btn-light"
+                                    data-bs-dismiss="modal">
+                                Cancelar
+                            </button>
+
+                            <button type="submit"
+                                    id="btnGuardarEdicionVacuna"
+                                    class="btn btn-primary">
+                                Guardar cambios
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
         <!-- MODAL: REGISTRAR DESPARASITACIÓN -->
         <div class="modal fade"
              id="modalDesparasitacion"
@@ -556,6 +650,17 @@ function mostrarMensajeFicha(mensaje, tipo = "success") {
     `;
 }
 
+function mostrarErrorEditarVacuna(mensaje, tipo = "danger") {
+    const contenedor = document.getElementById("mensajeEditarVacuna");
+    if (!contenedor) return;
+
+    contenedor.innerHTML = `
+        <div class="alert alert-${tipo} mb-0" role="alert">
+            ${escaparHTML(mensaje)}
+        </div>
+    `;
+}
+
 // CARGAR VETERINARIOS PARA EL FORMULARIO DE VACUNAS
 
 async function cargarVeterinarios() {
@@ -604,6 +709,122 @@ async function cargarVeterinarios() {
     }
 }
 
+// ABRIR MODAL DE EDICIÓN DE VACUNA
+
+function abrirModalEditarVacuna(vacunaId) {
+    const vacuna = vacunasActuales.find(
+        item => String(item.id) === String(vacunaId)
+    );
+
+    if (!vacuna) {
+        mostrarMensajeFicha(
+            "No se encontró el registro de vacuna seleccionado.",
+            "warning"
+        );
+        return;
+    }
+
+    document.getElementById("formEditarVacuna").reset();
+    document.getElementById("mensajeEditarVacuna").replaceChildren();
+
+    document.getElementById("editarVacunaId").value = vacuna.id;
+    document.getElementById("editarNombreVacuna").value =
+        vacuna.nombreVacuna ?? "";
+    document.getElementById("editarFechaAplicacionVacuna").value =
+        vacuna.fechaAplicacion ?? "";
+    document.getElementById("editarFechaAplicacionVacuna").max =
+        fechaActualLocal();
+    document.getElementById("editarProximaDosisVacuna").value =
+        vacuna.fechaProximaDosis ?? "";
+
+    bootstrap.Modal
+        .getOrCreateInstance(document.getElementById("modalEditarVacuna"))
+        .show();
+}
+
+// GUARDAR EDICIÓN DE VACUNA (PATCH /vacunas/{id}/edit)
+
+async function guardarEdicionVacuna(evento) {
+    evento.preventDefault();
+
+    document.getElementById("mensajeEditarVacuna").replaceChildren();
+
+    const vacunaId = document.getElementById("editarVacunaId").value;
+    const nombreVacuna = document
+        .getElementById("editarNombreVacuna")
+        .value.trim();
+    const fechaAplicacion = document
+        .getElementById("editarFechaAplicacionVacuna")
+        .value;
+    const fechaProximaDosis = document
+        .getElementById("editarProximaDosisVacuna")
+        .value;
+
+    if (!vacunaId) {
+        mostrarErrorEditarVacuna(
+            "No se identificó la vacuna a editar.",
+            "warning"
+        );
+        return;
+    }
+
+    if (!nombreVacuna || !fechaAplicacion || !fechaProximaDosis) {
+        mostrarErrorEditarVacuna(
+            "Completá el nombre de la vacuna, la fecha de aplicación y la próxima dosis.",
+            "warning"
+        );
+        return;
+    }
+
+    if (fechaAplicacion > fechaActualLocal()) {
+        mostrarErrorEditarVacuna(
+            "La fecha de aplicación no debe ser posterior a hoy.",
+            "warning"
+        );
+        return;
+    }
+
+    if (fechaProximaDosis < fechaAplicacion) {
+        mostrarErrorEditarVacuna(
+            "La fecha de la próxima dosis no debe ser anterior a la fecha de aplicación.",
+            "warning"
+        );
+        return;
+    }
+
+    const boton = document.getElementById("btnGuardarEdicionVacuna");
+    boton.disabled = true;
+
+    try {
+        await apiRequest(
+            `/vacunas/${encodeURIComponent(vacunaId)}/edit`,
+            {
+                method: "PATCH",
+                body: JSON.stringify({
+                    nombreVacuna,
+                    fechaAplicacion,
+                    fechaProximaDosis
+                })
+            }
+        );
+
+        bootstrap.Modal
+            .getOrCreateInstance(document.getElementById("modalEditarVacuna"))
+            .hide();
+
+        mostrarMensajeFicha("Vacuna actualizada correctamente.");
+
+        await cargarHistorial("vacunas");
+    } catch (error) {
+        console.error("Error al editar vacuna:", error);
+        mostrarErrorEditarVacuna(
+            error.message || "No se pudo actualizar la vacuna."
+        );
+    } finally {
+        boton.disabled = false;
+    }
+}
+
 // MOSTRAR UNA TABLA DE HISTORIAL
 
 function renderizarTabla(registros, tipo) {
@@ -616,12 +837,15 @@ function renderizarTabla(registros, tipo) {
         "Historial de desparasitaciones";
 
     const columnas = esVacuna
-        ? ["Vacuna", "Aplicación", "Próxima dosis", "Veterinario"]
+        ? ["Vacuna", "Aplicación", "Próxima dosis", "Veterinario", "Acciones"]
         : ["Producto utilizado", "Aplicación", "Próxima dosis"];
 
-    const encabezados = columnas.map(columna =>
-        `<th>${columna}</th>`
-    ).join("");
+    const encabezados = columnas.map((columna, indice) => {
+        const claseAlineacion = esVacuna && indice === columnas.length - 1
+            ? ' class="text-end"'
+            : "";
+        return `<th${claseAlineacion}>${columna}</th>`;
+    }).join("");
 
     const filas = registros.length === 0
         ? `
@@ -641,6 +865,15 @@ function renderizarTabla(registros, tipo) {
                     <td>${escaparHTML(
                         obtenerNombreVeterinario(registro.veterinarioId)
                     )}</td>
+                    <td class="text-end text-nowrap">
+                        <button type="button"
+                                class="btn btn-sm btn-outline-primary"
+                                data-accion="editar-vacuna"
+                                data-vacuna-id="${escaparHTML(registro.id)}"
+                                title="Editar vacuna">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                    </td>
                 `
                 : `
                     <td>${escaparHTML(registro.productoUsado)}</td>
@@ -684,10 +917,27 @@ function renderizarTabla(registros, tipo) {
                 ? "modalVacuna"
                 : "modalDesparasitacion";
 
+            if (esVacuna) {
+                document.getElementById("fechaAplicacionVacuna").max =
+                    fechaActualLocal();
+            }
+
             bootstrap.Modal
                 .getOrCreateInstance(document.getElementById(idModal))
                 .show();
         });
+
+    if (esVacuna) {
+        contenido.querySelector("tbody")
+            .addEventListener("click", evento => {
+                const boton = evento.target.closest(
+                    'button[data-accion="editar-vacuna"]'
+                );
+                if (!boton) return;
+
+                abrirModalEditarVacuna(boton.dataset.vacunaId);
+            });
+    }
 }
 
 function obtenerNombreVeterinario(id) {
@@ -733,6 +983,8 @@ async function cargarHistorial(tipo) {
         if (!Array.isArray(datos)) {
             throw new Error("La API no devolvió una lista de registros.");
         }
+
+        vacunasActuales = tipo === "vacunas" ? datos : [];
 
         renderizarTabla(datos, tipo);
 
@@ -912,6 +1164,9 @@ export function inicializarFichaMascota(
 
     document.getElementById("formVacuna")
         .addEventListener("submit", guardarVacuna);
+
+    document.getElementById("formEditarVacuna")
+        .addEventListener("submit", guardarEdicionVacuna);
 
     document.getElementById("formDesparasitacion")
         .addEventListener("submit", guardarDesparasitacion);
