@@ -2,6 +2,7 @@ import { apiRequest, escaparHTML } from "../api.js";
 
 let veterinariosDisponibles = [];
 let vacunasActuales = [];
+let desparasitacionesActuales = [];
 let mascotaActual = null;
 let seccionActual = "vacunas";
 let onMascotaActualizadaCallback = null;
@@ -475,6 +476,21 @@ export function mostrarFichaMascota(mascota) {
                                        required>
                             </div>
 
+                            <div class="mb-3">
+                                <label for="veterinarioDesparasitacion"
+                                       class="form-label">
+                                    Veterinario *
+                                </label>
+
+                                <select id="veterinarioDesparasitacion"
+                                        class="form-select"
+                                        required>
+                                    <option value="">
+                                        Seleccioná un veterinario
+                                    </option>
+                                </select>
+                            </div>
+
                         </div>
 
                         <div class="modal-footer">
@@ -488,6 +504,91 @@ export function mostrarFichaMascota(mascota) {
                                     id="btnGuardarDesparasitacion"
                                     class="btn btn-success">
                                 Guardar desparasitación
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL: EDITAR DESPARASITACIÓN (SOLO PRODUCTO Y FECHAS) -->
+        <div class="modal fade"
+             id="modalEditarDesparasitacion"
+             tabindex="-1"
+             aria-hidden="true">
+
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+
+                    <div class="modal-header">
+                        <h5 class="modal-title">Editar desparasitación</h5>
+
+                        <button type="button"
+                                class="btn-close"
+                                data-bs-dismiss="modal"
+                                aria-label="Cerrar"></button>
+                    </div>
+
+                    <form id="formEditarDesparasitacion">
+                        <div class="modal-body">
+
+                            <input type="hidden" id="editarDesparasitacionId">
+
+                            <div class="mb-3">
+                                <label for="editarProductoUsado"
+                                       class="form-label">
+                                    Producto utilizado *
+                                </label>
+
+                                <input type="text"
+                                       id="editarProductoUsado"
+                                       class="form-control"
+                                       required>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="editarFechaAplicacionDesparasitacion"
+                                       class="form-label">
+                                    Fecha de aplicación *
+                                </label>
+
+                                <input type="date"
+                                       id="editarFechaAplicacionDesparasitacion"
+                                       class="form-control"
+                                       required>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="editarProximaDosisDesparasitacion"
+                                       class="form-label">
+                                    Próxima dosis *
+                                </label>
+
+                                <input type="date"
+                                       id="editarProximaDosisDesparasitacion"
+                                       class="form-control"
+                                       required>
+                            </div>
+
+                            <div class="form-text">
+                                Solo podés corregir el producto utilizado y las fechas de este registro.
+                            </div>
+
+                            <div id="mensajeEditarDesparasitacion" class="mt-3"></div>
+
+                        </div>
+
+                        <div class="modal-footer">
+                            <button type="button"
+                                    class="btn btn-light"
+                                    data-bs-dismiss="modal">
+                                Cancelar
+                            </button>
+
+                            <button type="submit"
+                                    id="btnGuardarEdicionDesparasitacion"
+                                    class="btn btn-primary">
+                                Guardar cambios
                             </button>
                         </div>
                     </form>
@@ -661,10 +762,24 @@ function mostrarErrorEditarVacuna(mensaje, tipo = "danger") {
     `;
 }
 
-// CARGAR VETERINARIOS PARA EL FORMULARIO DE VACUNAS
+function mostrarErrorEditarDesparasitacion(mensaje, tipo = "danger") {
+    const contenedor = document.getElementById("mensajeEditarDesparasitacion");
+    if (!contenedor) return;
+
+    contenedor.innerHTML = `
+        <div class="alert alert-${tipo} mb-0" role="alert">
+            ${escaparHTML(mensaje)}
+        </div>
+    `;
+}
+
+// CARGAR VETERINARIOS PARA VACUNAS Y DESPARASITACIONES
 
 async function cargarVeterinarios() {
-    const selector = document.getElementById("veterinarioVacuna");
+    const selectores = [
+        document.getElementById("veterinarioVacuna"),
+        document.getElementById("veterinarioDesparasitacion")
+    ].filter(Boolean);
 
     try {
         const datos = await apiRequest("/veterinarios");
@@ -677,7 +792,7 @@ async function cargarVeterinarios() {
             veterinario => veterinario.estado !== false
         );
 
-        selector.innerHTML = `
+        const opcionesHtml = `
             <option value="">Seleccioná un veterinario</option>
 
             ${veterinariosDisponibles.map(veterinario => `
@@ -689,16 +804,18 @@ async function cargarVeterinarios() {
             `).join("")}
         `;
 
-        if (veterinariosDisponibles.length === 0) {
-            selector.innerHTML = `
-                <option value="">No hay veterinarios activos</option>
-            `;
-        }
+        selectores.forEach(selector => {
+            selector.innerHTML = veterinariosDisponibles.length === 0
+                ? `<option value="">No hay veterinarios activos</option>`
+                : opcionesHtml;
+        });
 
     } catch (error) {
-        selector.innerHTML = `
-            <option value="">No se pudieron cargar los veterinarios</option>
-        `;
+        selectores.forEach(selector => {
+            selector.innerHTML = `
+                <option value="">No se pudieron cargar los veterinarios</option>
+            `;
+        });
 
         console.error("Error al cargar veterinarios:", error);
 
@@ -825,6 +942,128 @@ async function guardarEdicionVacuna(evento) {
     }
 }
 
+// ABRIR MODAL DE EDICIÓN DE DESPARASITACIÓN
+
+function abrirModalEditarDesparasitacion(desparasitacionId) {
+    const registro = desparasitacionesActuales.find(
+        item => String(item.id) === String(desparasitacionId)
+    );
+
+    if (!registro) {
+        mostrarMensajeFicha(
+            "No se encontró el registro de desparasitación seleccionado.",
+            "warning"
+        );
+        return;
+    }
+
+    document.getElementById("formEditarDesparasitacion").reset();
+    document.getElementById("mensajeEditarDesparasitacion").replaceChildren();
+
+    document.getElementById("editarDesparasitacionId").value = registro.id;
+    document.getElementById("editarProductoUsado").value =
+        registro.productoUsado ?? "";
+    document.getElementById("editarFechaAplicacionDesparasitacion").value =
+        registro.fechaAplicacion ?? "";
+    document.getElementById("editarFechaAplicacionDesparasitacion").max =
+        fechaActualLocal();
+    document.getElementById("editarProximaDosisDesparasitacion").value =
+        registro.fechaProximaDosis ?? "";
+
+    bootstrap.Modal
+        .getOrCreateInstance(
+            document.getElementById("modalEditarDesparasitacion")
+        )
+        .show();
+}
+
+// GUARDAR EDICIÓN DE DESPARASITACIÓN (PATCH /desparasitaciones/{id}/edit)
+
+async function guardarEdicionDesparasitacion(evento) {
+    evento.preventDefault();
+
+    document.getElementById("mensajeEditarDesparasitacion").replaceChildren();
+
+    const desparasitacionId = document.getElementById(
+        "editarDesparasitacionId"
+    ).value;
+    const productoUsado = document
+        .getElementById("editarProductoUsado")
+        .value.trim();
+    const fechaAplicacion = document
+        .getElementById("editarFechaAplicacionDesparasitacion")
+        .value;
+    const fechaProximaDosis = document
+        .getElementById("editarProximaDosisDesparasitacion")
+        .value;
+
+    if (!desparasitacionId) {
+        mostrarErrorEditarDesparasitacion(
+            "No se identificó la desparasitación a editar.",
+            "warning"
+        );
+        return;
+    }
+
+    if (!productoUsado || !fechaAplicacion || !fechaProximaDosis) {
+        mostrarErrorEditarDesparasitacion(
+            "Completá el producto utilizado, la fecha de aplicación y la próxima dosis.",
+            "warning"
+        );
+        return;
+    }
+
+    if (fechaAplicacion > fechaActualLocal()) {
+        mostrarErrorEditarDesparasitacion(
+            "La fecha de aplicación no debe ser posterior a hoy.",
+            "warning"
+        );
+        return;
+    }
+
+    if (fechaProximaDosis < fechaAplicacion) {
+        mostrarErrorEditarDesparasitacion(
+            "La fecha de la próxima dosis no debe ser anterior a la fecha de aplicación.",
+            "warning"
+        );
+        return;
+    }
+
+    const boton = document.getElementById("btnGuardarEdicionDesparasitacion");
+    boton.disabled = true;
+
+    try {
+        await apiRequest(
+            `/desparasitaciones/${encodeURIComponent(desparasitacionId)}/edit`,
+            {
+                method: "PATCH",
+                body: JSON.stringify({
+                    productoUsado,
+                    fechaAplicacion,
+                    fechaProximaDosis
+                })
+            }
+        );
+
+        bootstrap.Modal
+            .getOrCreateInstance(
+                document.getElementById("modalEditarDesparasitacion")
+            )
+            .hide();
+
+        mostrarMensajeFicha("Desparasitación actualizada correctamente.");
+
+        await cargarHistorial("desparasitaciones");
+    } catch (error) {
+        console.error("Error al editar desparasitación:", error);
+        mostrarErrorEditarDesparasitacion(
+            error.message || "No se pudo actualizar la desparasitación."
+        );
+    } finally {
+        boton.disabled = false;
+    }
+}
+
 // MOSTRAR UNA TABLA DE HISTORIAL
 
 function renderizarTabla(registros, tipo) {
@@ -833,15 +1072,16 @@ function renderizarTabla(registros, tipo) {
 
     const esVacuna = tipo === "vacunas";
 
-    const titulo = esVacuna ? "Historial de vacunas" :
-        "Historial de desparasitaciones";
+    const titulo = esVacuna
+        ? "Historial de vacunas"
+        : "Historial de desparasitaciones";
 
     const columnas = esVacuna
         ? ["Vacuna", "Aplicación", "Próxima dosis", "Veterinario", "Acciones"]
-        : ["Producto utilizado", "Aplicación", "Próxima dosis"];
+        : ["Producto utilizado", "Aplicación", "Próxima dosis", "Veterinario", "Acciones"];
 
     const encabezados = columnas.map((columna, indice) => {
-        const claseAlineacion = esVacuna && indice === columnas.length - 1
+        const claseAlineacion = indice === columnas.length - 1
             ? ' class="text-end"'
             : "";
         return `<th${claseAlineacion}>${columna}</th>`;
@@ -857,14 +1097,16 @@ function renderizarTabla(registros, tipo) {
             </tr>
         `
         : registros.map(registro => {
+            const vetId = registro.veterinarioId ?? registro.veterinario?.id;
+            const vetTexto = registro.nombreVeterinario
+                || obtenerNombreVeterinario(vetId);
+
             const celdas = esVacuna
                 ? `
                     <td>${escaparHTML(registro.nombreVacuna)}</td>
                     <td>${formatearFecha(registro.fechaAplicacion)}</td>
                     <td>${formatearFecha(registro.fechaProximaDosis)}</td>
-                    <td>${escaparHTML(
-                        obtenerNombreVeterinario(registro.veterinarioId)
-                    )}</td>
+                    <td>${escaparHTML(vetTexto)}</td>
                     <td class="text-end text-nowrap">
                         <button type="button"
                                 class="btn btn-sm btn-outline-primary"
@@ -879,6 +1121,16 @@ function renderizarTabla(registros, tipo) {
                     <td>${escaparHTML(registro.productoUsado)}</td>
                     <td>${formatearFecha(registro.fechaAplicacion)}</td>
                     <td>${formatearFecha(registro.fechaProximaDosis)}</td>
+                    <td>${escaparHTML(vetTexto)}</td>
+                    <td class="text-end text-nowrap">
+                        <button type="button"
+                                class="btn btn-sm btn-outline-primary"
+                                data-accion="editar-desparasitacion"
+                                data-desparasitacion-id="${escaparHTML(registro.id)}"
+                                title="Editar desparasitación">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                    </td>
                 `;
 
             return `<tr>${celdas}</tr>`;
@@ -917,9 +1169,14 @@ function renderizarTabla(registros, tipo) {
                 ? "modalVacuna"
                 : "modalDesparasitacion";
 
-            if (esVacuna) {
-                document.getElementById("fechaAplicacionVacuna").max =
-                    fechaActualLocal();
+            const campoFechaAplicacion = document.getElementById(
+                esVacuna
+                    ? "fechaAplicacionVacuna"
+                    : "fechaAplicacionDesparasitacion"
+            );
+
+            if (campoFechaAplicacion) {
+                campoFechaAplicacion.max = fechaActualLocal();
             }
 
             bootstrap.Modal
@@ -927,17 +1184,23 @@ function renderizarTabla(registros, tipo) {
                 .show();
         });
 
-    if (esVacuna) {
-        contenido.querySelector("tbody")
-            .addEventListener("click", evento => {
+    contenido.querySelector("tbody")
+        .addEventListener("click", evento => {
+            if (esVacuna) {
                 const boton = evento.target.closest(
                     'button[data-accion="editar-vacuna"]'
                 );
                 if (!boton) return;
-
                 abrirModalEditarVacuna(boton.dataset.vacunaId);
-            });
-    }
+                return;
+            }
+
+            const botonDesp = evento.target.closest(
+                'button[data-accion="editar-desparasitacion"]'
+            );
+            if (!botonDesp) return;
+            abrirModalEditarDesparasitacion(botonDesp.dataset.desparasitacionId);
+        });
 }
 
 function obtenerNombreVeterinario(id) {
@@ -984,7 +1247,13 @@ async function cargarHistorial(tipo) {
             throw new Error("La API no devolvió una lista de registros.");
         }
 
-        vacunasActuales = tipo === "vacunas" ? datos : [];
+        if (tipo === "vacunas") {
+            vacunasActuales = datos;
+            desparasitacionesActuales = [];
+        } else {
+            desparasitacionesActuales = datos;
+            vacunasActuales = [];
+        }
 
         renderizarTabla(datos, tipo);
 
@@ -1067,10 +1336,14 @@ async function guardarVacuna(evento) {
     }
 }
 
-// GUARDAR DESPARASITACIÓN
+// GUARDAR DESPARASITACIÓN (CON VETERINARIO OBLIGATORIO)
 
 async function guardarDesparasitacion(evento) {
     evento.preventDefault();
+
+    const veterinarioId = document.getElementById(
+        "veterinarioDesparasitacion"
+    ).value;
 
     const desparasitacion = {
         productoUsado:
@@ -1079,16 +1352,18 @@ async function guardarDesparasitacion(evento) {
             document.getElementById("fechaAplicacionDesparasitacion").value,
         fechaProximaDosis:
             document.getElementById("proximaDosisDesparasitacion").value,
-        mascotaId: mascotaActual.id
+        mascotaId: mascotaActual.id,
+        veterinarioId: Number(veterinarioId)
     };
 
     if (
         !desparasitacion.productoUsado ||
         !desparasitacion.fechaAplicacion ||
-        !desparasitacion.fechaProximaDosis
+        !desparasitacion.fechaProximaDosis ||
+        !veterinarioId
     ) {
         mostrarMensajeFicha(
-            "Completá todos los campos obligatorios.",
+            "Completá todos los campos obligatorios, incluyendo el veterinario.",
             "warning"
         );
         return;
@@ -1170,6 +1445,9 @@ export function inicializarFichaMascota(
 
     document.getElementById("formDesparasitacion")
         .addEventListener("submit", guardarDesparasitacion);
+
+    document.getElementById("formEditarDesparasitacion")
+        .addEventListener("submit", guardarEdicionDesparasitacion);
 
     configurarControlesFoto();
     cargarVeterinarios();
