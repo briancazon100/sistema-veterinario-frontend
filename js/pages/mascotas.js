@@ -1,4 +1,3 @@
-
 import { apiRequest, escaparHTML } from "../api.js";
 import {
     mostrarFichaMascota,
@@ -7,6 +6,11 @@ import {
 
 let mascotas = [];
 let clientesDisponibles = [];
+
+let paginaActualMascotas = 0;
+let totalPaginasMascotas = 0;
+const tamanoPaginaMascotas = 10;
+let temporizadorBusquedaMascotas = null;
 
 export function mostrarMascotas() {
     return `
@@ -29,15 +33,48 @@ export function mostrarMascotas() {
         <div class="content-card">
             <div class="content-card-header">
                 <div class="row g-2 align-items-center">
-                    <div class="col-12 col-md-7">
+                    <div class="col-12 col-md-4">
                         <input
                             type="search"
-                            id="buscarMascota"
+                            id="buscarMascotaNombre"
                             class="form-control"
-                            placeholder="Buscar por nombre, especie, raza o dueño...">
+                            placeholder="Buscar por nombre...">
                     </div>
 
-                   
+                    <div class="col-12 col-sm-6 col-md-2">
+                        <input
+                            type="search"
+                            id="buscarMascotaEspecie"
+                            class="form-control"
+                            placeholder="Especie...">
+                    </div>
+
+                    <div class="col-12 col-sm-6 col-md-2">
+                        <input
+                            type="search"
+                            id="buscarMascotaRaza"
+                            class="form-control"
+                            placeholder="Raza...">
+                    </div>
+
+                    <div class="col-12 col-md-3">
+                        <select
+                            id="filtroMascotaCliente"
+                            class="form-select">
+                            <option value="">Todos los propietarios</option>
+                        </select>
+                    </div>
+
+                    <div class="col-12 col-md-1 d-grid">
+                        <button
+                            type="button"
+                            class="btn btn-outline-secondary"
+                            id="btnLimpiarFiltrosMascotas"
+                            title="Limpiar filtros"
+                            aria-label="Limpiar filtros">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -58,11 +95,39 @@ export function mostrarMascotas() {
                         <tr>
                             <td colspan="6"
                                 class="text-center text-secondary py-4">
-                                Cargando mascotas..
+                                Cargando mascotas...
                             </td>
                         </tr>
                     </tbody>
                 </table>
+            </div>
+
+            <div class="content-card-body border-top d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
+                <small id="infoPaginacionMascotas" class="text-secondary">
+                    Cargando información...
+                </small>
+
+                <div class="d-flex gap-2">
+                    <button
+                        type="button"
+                        class="btn btn-outline-primary btn-sm"
+                        id="btnPaginaAnteriorMascotas"
+                        disabled
+                    >
+                        <i class="bi bi-chevron-left me-1"></i>
+                        Anterior
+                    </button>
+
+                    <button
+                        type="button"
+                        class="btn btn-outline-primary btn-sm"
+                        id="btnPaginaSiguienteMascotas"
+                        disabled
+                    >
+                        Siguiente
+                        <i class="bi bi-chevron-right ms-1"></i>
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -225,97 +290,23 @@ function mostrarMensaje(mensaje, tipo = "success") {
     `;
 }
 
-// CARGAR PROPIETARIOS DESDE LA API DE CLIENTES
-
-async function cargarClientesDisponibles() {
-    const selector = document.getElementById("mascotaCliente");
-
-    try {
-        const datos = await apiRequest("/clientes");
-
-        if (!Array.isArray(datos)) {
-            throw new Error("La API de clientes no devolvió una lista.");
-        }
-
-        clientesDisponibles = datos;
-
-        selector.innerHTML = `
-            <option value="">Seleccioná un propietario</option>
-            ${clientesDisponibles.map(cliente => `
-                <option value="${escaparHTML(cliente.id)}">
-                    ${escaparHTML(cliente.nombre)}
-                    ${escaparHTML(cliente.apellido)}
-                    — ${escaparHTML(cliente.telefono)}
-                </option>
-            `).join("")}
-        `;
-
-        if (clientesDisponibles.length === 0) {
-            selector.innerHTML = `
-                <option value="">Primero registrá un cliente</option>
-            `;
-        }
-
-    } catch (error) {
-        selector.innerHTML = `
-            <option value="">
-                No se pudieron cargar los clientes
-            </option>
-        `;
-
-        mostrarMensaje(
-            `Error al cargar propietarios: ${error.message}`,
-            "danger"
-        );
-
-        console.error("Error al cargar propietarios:", error);
+function construirUrlFotoValida(fotoUrl) {
+    if (typeof fotoUrl !== "string" || !fotoUrl.trim()) {
+        return null;
     }
-}
 
-// LISTAR MASCOTAS DESDE LA API
-
-async function cargarMascotas() {
-    const tabla = document.getElementById("tablaMascotas");
-
-    tabla.innerHTML = `
-        <tr>
-            <td colspan="6" class="text-center text-secondary py-4">
-                Cargando mascotas...
-            </td>
-        </tr>
-    `;
-
-    try {
-        const datos = await apiRequest("/mascotas");
-
-        if (!Array.isArray(datos)) {
-            throw new Error("La API no devolvió una lista de mascotas.");
-        }
-
-        mascotas = datos;
-        renderizarMascotas();
-
-    } catch (error) {
-        tabla.innerHTML = `
-            <tr>
-                <td colspan="6" class="text-center text-danger py-4">
-                    ${escaparHTML(error.message)}
-                </td>
-            </tr>
-        `;
-
-        console.error("Error al cargar mascotas:", error);
+    const url = fotoUrl.trim();
+    if (/^https?:\/\//i.test(url) || url.startsWith("/")) {
+        return url;
     }
-}
 
-// CONSTRUIR LAS FILAS Y APLICAR LA BÚSQUEDA LOCAL
+    return null;
+}
 
 function renderizarMiniaturaMascota(mascota) {
-    const url = typeof mascota.fotoUrl === "string" && mascota.fotoUrl.trim()
-        ? mascota.fotoUrl.trim()
-        : null;
+    const url = construirUrlFotoValida(mascota.fotoUrl);
 
-    if (url && (/^https?:\/\//i.test(url) || url.startsWith("/"))) {
+    if (url) {
         return `
             <img src="${escaparHTML(url)}"
                  alt="${escaparHTML(mascota.nombre)}"
@@ -331,48 +322,227 @@ function renderizarMiniaturaMascota(mascota) {
     `;
 }
 
-// CONSTRUIR LAS FILAS Y APLICAR LA BÚSQUEDA LOCAL
+// CARGAR PROPIETARIOS DESDE LA API DE CLIENTES
+
+async function cargarClientesDisponibles() {
+    const selectorForm = document.getElementById("mascotaCliente");
+    const selectorFiltro = document.getElementById("filtroMascotaCliente");
+
+    try {
+        const datos = await apiRequest("/clientes");
+
+        if (!Array.isArray(datos)) {
+            throw new Error("La API de clientes no devolvió una lista.");
+        }
+
+        clientesDisponibles = datos;
+
+        const opcionesClientes = clientesDisponibles.map(cliente => `
+            <option value="${escaparHTML(cliente.id)}">
+                ${escaparHTML(cliente.nombre)}
+                ${escaparHTML(cliente.apellido)}
+                — ${escaparHTML(cliente.telefono)}
+            </option>
+        `).join("");
+
+        if (selectorForm) {
+            selectorForm.innerHTML = clientesDisponibles.length === 0
+                ? `<option value="">Primero registrá un cliente</option>`
+                : `<option value="">Seleccioná un propietario</option>${opcionesClientes}`;
+        }
+
+        if (selectorFiltro) {
+            const valorActual = selectorFiltro.value;
+            selectorFiltro.innerHTML = `
+                <option value="">Todos los propietarios</option>
+                ${opcionesClientes}
+            `;
+            selectorFiltro.value = valorActual;
+        }
+
+    } catch (error) {
+        if (selectorForm) {
+            selectorForm.innerHTML = `
+                <option value="">No se pudieron cargar los clientes</option>
+            `;
+        }
+
+        mostrarMensaje(
+            `Error al cargar propietarios: ${error.message}`,
+            "danger"
+        );
+
+        console.error("Error al cargar propietarios:", error);
+    }
+}
+
+// OBTENER PARÁMETROS DE BÚSQUEDA Y FILTRO
+
+function obtenerParametrosBusquedaMascotas(pagina = paginaActualMascotas) {
+    const parametros = new URLSearchParams({
+        page: String(pagina),
+        size: String(tamanoPaginaMascotas)
+    });
+
+    const nombre = document.getElementById("buscarMascotaNombre")?.value.trim();
+    const especie = document.getElementById("buscarMascotaEspecie")?.value.trim();
+    const raza = document.getElementById("buscarMascotaRaza")?.value.trim();
+    const clienteId = document.getElementById("filtroMascotaCliente")?.value;
+
+    if (nombre) parametros.set("nombre", nombre);
+    if (especie) parametros.set("especie", especie);
+    if (raza) parametros.set("raza", raza);
+    if (clienteId) parametros.set("clienteId", clienteId);
+
+    return parametros;
+}
+
+// BUSCAR Y LISTAR MASCOTAS PAGINADAS DESDE EL BACKEND
+
+async function cargarMascotas(pagina = paginaActualMascotas) {
+    const tabla = document.getElementById("tablaMascotas");
+
+    tabla.innerHTML = `
+        <tr>
+            <td colspan="6" class="text-center text-secondary py-4">
+                <span class="spinner-border spinner-border-sm me-2"></span>
+                Buscando mascotas...
+            </td>
+        </tr>
+    `;
+
+    try {
+        const parametros = obtenerParametrosBusquedaMascotas(pagina);
+
+        const resultado = await apiRequest(
+            `/mascotas/buscar?${parametros.toString()}`
+        );
+
+        if (!resultado || !Array.isArray(resultado.content)) {
+            throw new Error(
+                "La API no devolvió una página válida de mascotas."
+            );
+        }
+
+        paginaActualMascotas = resultado.number ?? pagina;
+        totalPaginasMascotas = resultado.totalPages ?? 0;
+        mascotas = resultado.content;
+
+        renderizarMascotas();
+        actualizarControlesPaginacionMascotas(resultado);
+
+    } catch (error) {
+        tabla.innerHTML = `
+            <tr>
+                <td colspan="6" class="text-center text-danger py-4">
+                    ${escaparHTML(error.message)}
+                </td>
+            </tr>
+        `;
+
+        document.getElementById("infoPaginacionMascotas").textContent =
+            "No se pudo cargar la paginación.";
+        document.getElementById("btnPaginaAnteriorMascotas").disabled = true;
+        document.getElementById("btnPaginaSiguienteMascotas").disabled = true;
+
+        console.error("Error al buscar mascotas:", error);
+    }
+}
+
+function programarBusquedaMascotas() {
+    clearTimeout(temporizadorBusquedaMascotas);
+    temporizadorBusquedaMascotas = setTimeout(() => {
+        cargarMascotas(0);
+    }, 350);
+}
+
+function configurarFiltrosMascotas() {
+    const inputNombre = document.getElementById("buscarMascotaNombre");
+    const inputEspecie = document.getElementById("buscarMascotaEspecie");
+    const inputRaza = document.getElementById("buscarMascotaRaza");
+    const selectCliente = document.getElementById("filtroMascotaCliente");
+    const btnLimpiar = document.getElementById("btnLimpiarFiltrosMascotas");
+
+    [inputNombre, inputEspecie, inputRaza].forEach(input => {
+        input?.addEventListener("input", programarBusquedaMascotas);
+    });
+
+    selectCliente?.addEventListener("change", () => {
+        clearTimeout(temporizadorBusquedaMascotas);
+        cargarMascotas(0);
+    });
+
+    btnLimpiar?.addEventListener("click", () => {
+        clearTimeout(temporizadorBusquedaMascotas);
+        if (inputNombre) inputNombre.value = "";
+        if (inputEspecie) inputEspecie.value = "";
+        if (inputRaza) inputRaza.value = "";
+        if (selectCliente) selectCliente.value = "";
+        cargarMascotas(0);
+    });
+}
+
+function actualizarControlesPaginacionMascotas(resultado) {
+    const botonAnterior = document.getElementById("btnPaginaAnteriorMascotas");
+    const botonSiguiente = document.getElementById("btnPaginaSiguienteMascotas");
+    const informacion = document.getElementById("infoPaginacionMascotas");
+
+    const totalElementos = resultado.totalElements ?? 0;
+    const numeroPagina = resultado.number ?? 0;
+    const tamanio = resultado.size ?? tamanoPaginaMascotas;
+
+    const desde = totalElementos === 0
+        ? 0
+        : numeroPagina * tamanio + 1;
+
+    const hasta = Math.min(
+        (numeroPagina + 1) * tamanio,
+        totalElementos
+    );
+
+    informacion.textContent =
+        `Mostrando ${desde} a ${hasta} de ${totalElementos} mascotas`;
+
+    botonAnterior.disabled = resultado.first ?? numeroPagina === 0;
+    botonSiguiente.disabled =
+        resultado.last ?? numeroPagina >= totalPaginasMascotas - 1;
+}
+
+function configurarPaginacionMascotas() {
+    const botonAnterior = document.getElementById("btnPaginaAnteriorMascotas");
+    const botonSiguiente = document.getElementById("btnPaginaSiguienteMascotas");
+
+    botonAnterior.addEventListener("click", async () => {
+        if (paginaActualMascotas > 0) {
+            await cargarMascotas(paginaActualMascotas - 1);
+        }
+    });
+
+    botonSiguiente.addEventListener("click", async () => {
+        if (paginaActualMascotas < totalPaginasMascotas - 1) {
+            await cargarMascotas(paginaActualMascotas + 1);
+        }
+    });
+}
+
+// CONSTRUIR LAS FILAS DE LA PÁGINA DEVUELTA POR EL BACKEND
 
 function renderizarMascotas() {
     const tabla = document.getElementById("tablaMascotas");
 
-    const busqueda = document.getElementById("buscarMascota")
-        .value.trim().toLowerCase();
-
-    const filtradas = mascotas.filter(mascota => {
-        const cliente = clientesDisponibles.find(
-            item => String(item.id) === String(mascota.clienteId)
-        );
-
-        const propietario = mascota.nombreClienteCompleto ||
-            (cliente
-                ? `${cliente.nombre} ${cliente.apellido}`
-                : "");
-
-        const texto = [
-            mascota.nombre,
-            mascota.especie,
-            mascota.raza,
-            mascota.fechaNacimiento,
-            propietario
-        ].join(" ").toLowerCase();
-
-        return texto.includes(busqueda);
-    });
-
-    if (filtradas.length === 0) {
+    if (mascotas.length === 0) {
         tabla.innerHTML = `
             <tr>
                 <td colspan="6"
                     class="text-center text-secondary py-4">
-                    No se encontraron mascotas.
+                    No se encontraron mascotas con esos criterios.
                 </td>
             </tr>
         `;
         return;
     }
 
-    tabla.innerHTML = filtradas.map(mascota => {
+    tabla.innerHTML = mascotas.map(mascota => {
         const cliente = clientesDisponibles.find(
             item => String(item.id) === String(mascota.clienteId)
         );
@@ -524,7 +694,7 @@ async function guardarMascota(evento) {
             .getOrCreateInstance(document.getElementById("mascotaModal"))
             .hide();
 
-        await cargarMascotas();
+        await cargarMascotas(id ? paginaActualMascotas : 0);
 
         mostrarMensaje(
             id
@@ -561,7 +731,7 @@ async function eliminarMascota(id) {
             method: "DELETE"
         });
 
-        await cargarMascotas();
+        await cargarMascotas(paginaActualMascotas);
 
         mostrarMensaje("Mascota eliminada correctamente.");
 
@@ -576,8 +746,6 @@ async function eliminarMascota(id) {
 export function inicializarMascotas() {
     document.getElementById("btnNuevaMascota")
         .addEventListener("click", () => {
-            const selector = document.getElementById("mascotaCliente");
-
             if (clientesDisponibles.length === 0) {
                 mostrarMensaje(
                     "Necesitás registrar al menos un cliente antes de cargar una mascota.",
@@ -586,15 +754,11 @@ export function inicializarMascotas() {
                 return;
             }
 
-           
             abrirFormularioMascota();
         });
 
     document.getElementById("formMascota")
         .addEventListener("submit", guardarMascota);
-
-    document.getElementById("buscarMascota")
-        .addEventListener("input", renderizarMascotas);
 
     document.getElementById("tablaMascotas")
         .addEventListener("click", evento => {
@@ -605,15 +769,15 @@ export function inicializarMascotas() {
             const id = boton.dataset.id;
             if (boton.dataset.accion === "ficha") {
                 const mascota = mascotas.find(
-                item => String(item.id) === String(id)
-            );
+                    item => String(item.id) === String(id)
+                );
 
-            if (mascota) {
-                abrirFicha(mascota);
+                if (mascota) {
+                    abrirFicha(mascota);
+                }
+
+                return;
             }
-
-    return;
-}
 
             if (boton.dataset.accion === "editar") {
                 const mascota = mascotas.find(
@@ -630,12 +794,7 @@ export function inicializarMascotas() {
             }
         });
 
-    // Pedimos propietarios y mascotas a la API.
-    cargarClientesDisponibles().then(() => {
-        renderizarMascotas();
-    });
-
-   function abrirFicha(mascota) {
+    function abrirFicha(mascota) {
         const appContent = document.getElementById("app-content");
 
         appContent.innerHTML = mostrarFichaMascota(mascota);
@@ -660,6 +819,8 @@ export function inicializarMascotas() {
         );
     }
 
-    cargarMascotas();
-
+    configurarFiltrosMascotas();
+    configurarPaginacionMascotas();
+    cargarClientesDisponibles();
+    cargarMascotas(0);
 }
