@@ -1,7 +1,10 @@
-
 import { apiRequest, escaparHTML } from "../api.js";
 
 let clientes = [];
+let paginaActualClientes = 0;
+let totalPaginasClientes = 0;
+const tamanoPaginaClientes = 10;
+let temporizadorBusquedaClientes = null;
 
 export function mostrarClientes() {
     return `
@@ -23,12 +26,50 @@ export function mostrarClientes() {
 
         <div class="content-card">
             <div class="content-card-header">
-                <input
-                    type="search"
-                    id="buscarCliente"
-                    class="form-control"
-                    placeholder="Buscar por nombre, apellido o teléfono..."
-                    style="max-width: 450px;">
+                <div class="row g-2 align-items-center">
+                    <div class="col-12 col-sm-6 col-md-3">
+                        <input
+                            type="search"
+                            id="buscarClienteNombre"
+                            class="form-control"
+                            placeholder="Nombre...">
+                    </div>
+
+                    <div class="col-12 col-sm-6 col-md-3">
+                        <input
+                            type="search"
+                            id="buscarClienteApellido"
+                            class="form-control"
+                            placeholder="Apellido...">
+                    </div>
+
+                    <div class="col-12 col-sm-6 col-md-2">
+                        <input
+                            type="search"
+                            id="buscarClienteTelefono"
+                            class="form-control"
+                            placeholder="Teléfono...">
+                    </div>
+
+                    <div class="col-12 col-sm-6 col-md-3">
+                        <input
+                            type="search"
+                            id="buscarClienteDireccion"
+                            class="form-control"
+                            placeholder="Dirección...">
+                    </div>
+
+                    <div class="col-12 col-md-1 d-grid">
+                        <button
+                            type="button"
+                            class="btn btn-outline-secondary"
+                            id="btnLimpiarFiltrosClientes"
+                            title="Limpiar filtros"
+                            aria-label="Limpiar filtros">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <div class="table-responsive">
@@ -52,6 +93,34 @@ export function mostrarClientes() {
                         </tr>
                     </tbody>
                 </table>
+            </div>
+
+            <div class="content-card-body border-top d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
+                <small id="infoPaginacionClientes" class="text-secondary">
+                    Cargando información...
+                </small>
+
+                <div class="d-flex gap-2">
+                    <button
+                        type="button"
+                        class="btn btn-outline-primary btn-sm"
+                        id="btnPaginaAnteriorClientes"
+                        disabled
+                    >
+                        <i class="bi bi-chevron-left me-1"></i>
+                        Anterior
+                    </button>
+
+                    <button
+                        type="button"
+                        class="btn btn-outline-primary btn-sm"
+                        id="btnPaginaSiguienteClientes"
+                        disabled
+                    >
+                        Siguiente
+                        <i class="bi bi-chevron-right ms-1"></i>
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -155,28 +224,60 @@ export function mostrarClientes() {
     `;
 }
 
-// LISTAR CLIENTES
+// OBTENER PARÁMETROS DE BÚSQUEDA Y FILTRO
 
-async function cargarClientes() {
+function obtenerParametrosBusquedaClientes(pagina = paginaActualClientes) {
+    const parametros = new URLSearchParams({
+        page: String(pagina),
+        size: String(tamanoPaginaClientes)
+    });
+
+    const nombre = document.getElementById("buscarClienteNombre")?.value.trim();
+    const apellido = document.getElementById("buscarClienteApellido")?.value.trim();
+    const telefono = document.getElementById("buscarClienteTelefono")?.value.trim();
+    const direccion = document.getElementById("buscarClienteDireccion")?.value.trim();
+
+    if (nombre) parametros.set("nombre", nombre);
+    if (apellido) parametros.set("apellido", apellido);
+    if (telefono) parametros.set("telefono", telefono);
+    if (direccion) parametros.set("direccion", direccion);
+
+    return parametros;
+}
+
+// BUSCAR Y LISTAR CLIENTES PAGINADOS
+
+async function cargarClientes(pagina = paginaActualClientes) {
     const tabla = document.getElementById("tablaClientes");
 
     tabla.innerHTML = `
         <tr>
-            <td colspan="5" class="text-center py-4">
-                Cargando clientes...
+            <td colspan="5" class="text-center text-secondary py-4">
+                <span class="spinner-border spinner-border-sm me-2"></span>
+                Buscando clientes...
             </td>
         </tr>
     `;
 
     try {
-        const datos = await apiRequest("/clientes");
+        const parametros = obtenerParametrosBusquedaClientes(pagina);
 
-        if (!Array.isArray(datos)) {
-            throw new Error("La API no devolvió una lista de clientes.");
+        const resultado = await apiRequest(
+            `/clientes/buscar?${parametros.toString()}`
+        );
+
+        if (!resultado || !Array.isArray(resultado.content)) {
+            throw new Error(
+                "La API no devolvió una página válida de clientes."
+            );
         }
 
-        clientes = datos;
+        paginaActualClientes = resultado.number ?? pagina;
+        totalPaginasClientes = resultado.totalPages ?? 0;
+        clientes = resultado.content;
+
         renderizarClientes();
+        actualizarControlesPaginacionClientes(resultado);
 
     } catch (error) {
         tabla.innerHTML = `
@@ -187,42 +288,103 @@ async function cargarClientes() {
             </tr>
         `;
 
+        document.getElementById("infoPaginacionClientes").textContent =
+            "No se pudo cargar la paginación.";
+        document.getElementById("btnPaginaAnteriorClientes").disabled = true;
+        document.getElementById("btnPaginaSiguienteClientes").disabled = true;
+
         console.error("Error al cargar clientes:", error);
     }
 }
 
-function renderizarClientes() {
-    const tabla = document.getElementById("tablaClientes");
-    const busqueda = document
-        .getElementById("buscarCliente")
-        .value
-        .trim()
-        .toLowerCase();
+function programarBusquedaClientes() {
+    clearTimeout(temporizadorBusquedaClientes);
+    temporizadorBusquedaClientes = setTimeout(() => {
+        cargarClientes(0);
+    }, 350);
+}
 
-    const filtrados = clientes.filter(cliente => {
-        const texto = [
-            cliente.nombre,
-            cliente.apellido,
-            cliente.telefono,
-            cliente.direccion
-        ].join(" ").toLowerCase();
+function configurarFiltrosClientes() {
+    const campos = [
+        document.getElementById("buscarClienteNombre"),
+        document.getElementById("buscarClienteApellido"),
+        document.getElementById("buscarClienteTelefono"),
+        document.getElementById("buscarClienteDireccion")
+    ];
 
-        return texto.includes(busqueda);
+    campos.forEach(campo => {
+        campo?.addEventListener("input", programarBusquedaClientes);
     });
 
-    if (filtrados.length === 0) {
+    document.getElementById("btnLimpiarFiltrosClientes")
+        ?.addEventListener("click", () => {
+            clearTimeout(temporizadorBusquedaClientes);
+            campos.forEach(campo => {
+                if (campo) campo.value = "";
+            });
+            cargarClientes(0);
+        });
+}
+
+function actualizarControlesPaginacionClientes(resultado) {
+    const botonAnterior = document.getElementById("btnPaginaAnteriorClientes");
+    const botonSiguiente = document.getElementById("btnPaginaSiguienteClientes");
+    const informacion = document.getElementById("infoPaginacionClientes");
+
+    const totalElementos = resultado.totalElements ?? 0;
+    const numeroPagina = resultado.number ?? 0;
+    const tamanio = resultado.size ?? tamanoPaginaClientes;
+
+    const desde = totalElementos === 0
+        ? 0
+        : numeroPagina * tamanio + 1;
+
+    const hasta = Math.min(
+        (numeroPagina + 1) * tamanio,
+        totalElementos
+    );
+
+    informacion.textContent =
+        `Mostrando ${desde} a ${hasta} de ${totalElementos} clientes`;
+
+    botonAnterior.disabled = resultado.first ?? numeroPagina === 0;
+    botonSiguiente.disabled =
+        resultado.last ?? numeroPagina >= totalPaginasClientes - 1;
+}
+
+function configurarPaginacionClientes() {
+    const botonAnterior = document.getElementById("btnPaginaAnteriorClientes");
+    const botonSiguiente = document.getElementById("btnPaginaSiguienteClientes");
+
+    botonAnterior.addEventListener("click", async () => {
+        if (paginaActualClientes > 0) {
+            await cargarClientes(paginaActualClientes - 1);
+        }
+    });
+
+    botonSiguiente.addEventListener("click", async () => {
+        if (paginaActualClientes < totalPaginasClientes - 1) {
+            await cargarClientes(paginaActualClientes + 1);
+        }
+    });
+}
+
+function renderizarClientes() {
+    const tabla = document.getElementById("tablaClientes");
+
+    if (clientes.length === 0) {
         tabla.innerHTML = `
             <tr>
                 <td colspan="5"
                     class="text-center text-secondary py-4">
-                    No se encontraron clientes.
+                    No se encontraron clientes con esos criterios.
                 </td>
             </tr>
         `;
         return;
     }
 
-    tabla.innerHTML = filtrados.map(cliente => `
+    tabla.innerHTML = clientes.map(cliente => `
         <tr>
             <td>${escaparHTML(cliente.nombre)}</td>
             <td>${escaparHTML(cliente.apellido)}</td>
@@ -308,7 +470,7 @@ async function guardarCliente(evento) {
             .getOrCreateInstance(document.getElementById("clienteModal"))
             .hide();
 
-        await cargarClientes();
+        await cargarClientes(id ? paginaActualClientes : 0);
 
         mostrarMensaje(
             id ? "Cliente actualizado correctamente."
@@ -342,7 +504,7 @@ async function eliminarCliente(id) {
             method: "DELETE"
         });
 
-        await cargarClientes();
+        await cargarClientes(paginaActualClientes);
 
         mostrarMensaje("Cliente eliminado correctamente.");
 
@@ -373,8 +535,8 @@ export function inicializarClientes() {
     document.getElementById("formCliente")
         .addEventListener("submit", guardarCliente);
 
-    document.getElementById("buscarCliente")
-        .addEventListener("input", renderizarClientes);
+    configurarFiltrosClientes();
+    configurarPaginacionClientes();
 
     document.getElementById("tablaClientes")
         .addEventListener("click", evento => {
@@ -395,5 +557,5 @@ export function inicializarClientes() {
             }
         });
 
-    cargarClientes();
+    cargarClientes(0);
 }
