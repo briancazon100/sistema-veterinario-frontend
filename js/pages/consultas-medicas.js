@@ -53,7 +53,7 @@ export function mostrarConsultasMedicas() {
                 <div class="row g-3 align-items-end">
                     <div class="col-12 col-md-8">
                         <label for="filtroMascotaConsulta" class="form-label fw-semibold">
-                            Seleccioná una mascota para ver su historial y antecedentes
+                            Mascota
                         </label>
                         <select id="filtroMascotaConsulta" class="form-select">
                             <option value="">Seleccioná una mascota</option>
@@ -70,7 +70,6 @@ export function mostrarConsultasMedicas() {
                     </div>
                 </div>
 
-                <!-- AQUÍ SE MUESTRAN ALERGIAS, ENFERMEDADES CRÓNICAS, SEXO Y ESTERILIZADO -->
                 <div id="resumenClinicoMascota"></div>
             </div>
         </div>
@@ -87,7 +86,7 @@ export function mostrarConsultasMedicas() {
                             <th>Fecha</th>
                             <th>Motivo</th>
                             <th>Diagnóstico</th>
-                            <th>Tratamiento</th>
+                            <th>Observaciones</th>
                             <th>Veterinario</th>
                         </tr>
                     </thead>
@@ -108,7 +107,7 @@ export function mostrarConsultasMedicas() {
              id="modalNuevaConsulta"
              tabindex="-1"
              aria-hidden="true">
-            <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title">Registrar consulta médica</h5>
@@ -120,27 +119,24 @@ export function mostrarConsultasMedicas() {
 
                     <form id="formConsulta">
                         <div class="modal-body">
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label for="consultaMascota" class="form-label">
-                                        Mascota *
-                                    </label>
-                                    <select id="consultaMascota" class="form-select" required>
-                                        <option value="">Seleccioná una mascota</option>
-                                    </select>
-                                </div>
-
-                                <div class="col-md-6">
-                                    <label for="consultaVeterinario" class="form-label">
-                                        Veterinario *
-                                    </label>
-                                    <select id="consultaVeterinario" class="form-select" required>
-                                        <option value="">Seleccioná un veterinario</option>
-                                    </select>
-                                </div>
+                            <div class="mb-3">
+                                <label for="consultaMascota" class="form-label">
+                                    Mascota *
+                                </label>
+                                <select id="consultaMascota" class="form-select" required>
+                                    <option value="">Seleccioná una mascota</option>
+                                </select>
                             </div>
 
-                            <!-- También mostramos los antecedentes dentro del modal al elegir mascota -->
+                            <div class="mb-3">
+                                <label for="consultaVeterinario" class="form-label">
+                                    Veterinario *
+                                </label>
+                                <select id="consultaVeterinario" class="form-select" required>
+                                    <option value="">Seleccioná un veterinario</option>
+                                </select>
+                            </div>
+
                             <div id="resumenClinicoModalConsulta"></div>
 
                             <div class="mt-3">
@@ -164,22 +160,12 @@ export function mostrarConsultasMedicas() {
                             </div>
 
                             <div class="mt-3">
-                                <label for="consultaTratamiento" class="form-label">
-                                    Tratamiento indicado *
-                                </label>
-                                <textarea id="consultaTratamiento"
-                                          class="form-control"
-                                          rows="3"
-                                          required></textarea>
-                            </div>
-
-                            <div class="mt-3">
                                 <label for="consultaObservaciones" class="form-label">
                                     Observaciones
                                 </label>
                                 <textarea id="consultaObservaciones"
                                           class="form-control"
-                                          rows="2"></textarea>
+                                          rows="3"></textarea>
                             </div>
                         </div>
 
@@ -231,11 +217,6 @@ function construirTarjetaAntecedentes(mascota) {
                 <span class="fw-semibold small">
                     <i class="bi bi-clipboard2-heart me-1"></i>
                     Antecedentes clínicos de ${escaparHTML(mascota.nombre)}
-                    ${
-                        mascota.nombreClienteCompleto
-                            ? `<span class="text-secondary fw-normal">(${escaparHTML(mascota.nombreClienteCompleto)})</span>`
-                            : ""
-                    }
                 </span>
 
                 <div class="d-flex flex-wrap gap-1">
@@ -251,7 +232,6 @@ function construirTarjetaAntecedentes(mascota) {
             <div class="row g-2 small">
                 <div class="col-12 col-md-6">
                     <strong class="${tieneAlergias ? "text-warning-emphasis" : "text-secondary"}">
-                        <i class="bi bi-exclamation-triangle-fill me-1"></i>
                         Alergias:
                     </strong>
                     <span class="text-break">${escaparHTML(alergiasTexto)}</span>
@@ -259,7 +239,6 @@ function construirTarjetaAntecedentes(mascota) {
 
                 <div class="col-12 col-md-6">
                     <strong class="${tieneCondiciones ? "text-info-emphasis" : "text-secondary"}">
-                        <i class="bi bi-heart-pulse me-1"></i>
                         Condiciones crónicas:
                     </strong>
                     <span class="text-break">${escaparHTML(condicionesTexto)}</span>
@@ -382,7 +361,7 @@ function renderizarConsultas() {
             <td>${formatearFechaHora(c.fechaHora ?? c.fechaConsulta ?? c.fecha)}</td>
             <td>${escaparHTML(c.motivo ?? c.motivoConsulta ?? "—")}</td>
             <td>${escaparHTML(c.diagnostico ?? "—")}</td>
-            <td>${escaparHTML(c.tratamiento ?? "—")}</td>
+            <td>${escaparHTML(c.observaciones ?? "—")}</td>
             <td>${escaparHTML(obtenerNombreVeterinario(c))}</td>
         </tr>
     `).join("");
@@ -434,10 +413,9 @@ async function guardarConsulta(evento) {
     const veterinarioId = document.getElementById("consultaVeterinario").value;
     const motivo = document.getElementById("consultaMotivo").value.trim();
     const diagnostico = document.getElementById("consultaDiagnostico").value.trim();
-    const tratamiento = document.getElementById("consultaTratamiento").value.trim();
     const observaciones = document.getElementById("consultaObservaciones").value.trim();
 
-    if (!mascotaId || !veterinarioId || !motivo || !diagnostico || !tratamiento) {
+    if (!mascotaId || !veterinarioId || !motivo || !diagnostico) {
         mostrarMensaje("Completá todos los campos obligatorios.", "warning");
         return;
     }
@@ -453,7 +431,6 @@ async function guardarConsulta(evento) {
                 veterinarioId: Number(veterinarioId),
                 motivo,
                 diagnostico,
-                tratamiento,
                 observaciones: observaciones || null
             })
         });
@@ -467,13 +444,9 @@ async function guardarConsulta(evento) {
 
         mostrarMensaje("Consulta médica registrada correctamente.");
 
-        if (mascotaSeleccionadaId === String(mascotaId)) {
-            await cargarConsultasPorMascota(mascotaId);
-        } else {
-            const selectFiltro = document.getElementById("filtroMascotaConsulta");
-            if (selectFiltro) selectFiltro.value = String(mascotaId);
-            await cargarConsultasPorMascota(mascotaId);
-        }
+        const selectFiltro = document.getElementById("filtroMascotaConsulta");
+        if (selectFiltro) selectFiltro.value = String(mascotaId);
+        await cargarConsultasPorMascota(mascotaId);
     } catch (error) {
         console.error("Error al guardar consulta:", error);
         mostrarMensaje(error.message, "danger");

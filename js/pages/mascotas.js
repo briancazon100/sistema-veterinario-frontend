@@ -140,7 +140,7 @@ export function mostrarMascotas() {
              aria-labelledby="mascotaModalTitulo"
              aria-hidden="true">
 
-            <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
 
                     <div class="modal-header">
@@ -941,6 +941,15 @@ export function inicializarMascotas() {
             }
         );
     }
+
+    const modalEl = document.getElementById("mascotaModal");
+    modalEl?.addEventListener("hidden.bs.modal", () => {
+        document.getElementById("formMascota")?.reset();
+        document.querySelectorAll(".modal-backdrop").forEach(b => b.remove());
+        document.body.classList.remove("modal-open");
+        document.body.style.removeProperty("overflow");
+        document.body.style.removeProperty("padding-right");
+    });
 
     configurarFiltrosMascotas();
     configurarPaginacionMascotas();
