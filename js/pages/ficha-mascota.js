@@ -105,6 +105,13 @@ function renderizarAvatarMascota(mascota) {
         </div>
     `;
 }
+function formatearSexoFicha(sexo) {
+    if (!sexo) return "No informado";
+    const normalizado = String(sexo).toUpperCase();
+    if (normalizado === "MACHO") return "Macho";
+    if (normalizado === "HEMBRA") return "Hembra";
+    return sexo;
+}
 
 function renderizarCabeceraMascota(mascota) {
     const urlFoto = construirUrlFotoValida(mascota.fotoUrl);
@@ -115,6 +122,8 @@ function renderizarCabeceraMascota(mascota) {
         mascota.nombreClienteCompleto || "No informado"
     );
     const edadTexto = calcularEdadTexto(mascota.fechaNacimiento);
+    const tieneAlergias = Boolean(mascota.alergiasConocidas?.trim());
+    const tieneCondiciones = Boolean(mascota.condicionesCronicas?.trim());
 
     return `
         <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center gap-4">
@@ -134,6 +143,12 @@ function renderizarCabeceraMascota(mascota) {
                     </span>
                     <span class="badge bg-secondary-subtle text-secondary-emphasis border border-secondary-subtle">
                         ${raza}
+                    </span>
+                    <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle">
+                        ${escaparHTML(formatearSexoFicha(mascota.sexo))}
+                    </span>
+                    <span class="badge ${mascota.esterilizado ? "bg-success-subtle text-success-emphasis border border-success-subtle" : "bg-secondary-subtle text-secondary-emphasis border border-secondary-subtle"}">
+                        ${mascota.esterilizado ? "Esterilizado" : "No esterilizado"}
                     </span>
                     ${
                         edadTexto
@@ -163,11 +178,36 @@ function renderizarCabeceraMascota(mascota) {
                        id="inputFotoMascota"
                        accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
                        class="d-none">
+
+                <div class="row g-2 mt-3">
+                    <div class="col-12 col-sm-6">
+                        <div class="p-3 rounded-3 border ${tieneAlergias ? "border-warning-subtle bg-warning-subtle" : "bg-body-tertiary"}">
+                            <div class="small fw-semibold ${tieneAlergias ? "text-warning-emphasis" : "text-secondary"} mb-1">
+                                <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                                Alergias conocidas
+                            </div>
+                            <div class="small text-break">
+                                ${escaparHTML(mascota.alergiasConocidas?.trim() || "Ninguna alergia registrada")}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-sm-6">
+                        <div class="p-3 rounded-3 border ${tieneCondiciones ? "border-info-subtle bg-info-subtle" : "bg-body-tertiary"}">
+                            <div class="small fw-semibold ${tieneCondiciones ? "text-info-emphasis" : "text-secondary"} mb-1">
+                                <i class="bi bi-heart-pulse me-1"></i>
+                                Condiciones crónicas / enfermedades
+                            </div>
+                            <div class="small text-break">
+                                ${escaparHTML(mascota.condicionesCronicas?.trim() || "Sin condiciones crónicas registradas")}
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     `;
 }
-
 export function mostrarFichaMascota(mascota) {
     return `
         <div class="page-heading">

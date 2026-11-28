@@ -12,6 +12,8 @@ let totalPaginasMascotas = 0;
 const tamanoPaginaMascotas = 10;
 let temporizadorBusquedaMascotas = null;
 
+const REGEX_SOLO_LETRAS = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ ]+$/;
+
 export function mostrarMascotas() {
     return `
         <div class="page-heading">
@@ -85,7 +87,7 @@ export function mostrarMascotas() {
                             <th>Nombre</th>
                             <th>Especie</th>
                             <th>Raza</th>
-                            <th>Nacimiento</th>
+                            <th>Sexo / Esterilizado</th>
                             <th>Propietario</th>
                             <th class="text-end">Acciones</th>
                         </tr>
@@ -138,7 +140,7 @@ export function mostrarMascotas() {
              aria-labelledby="mascotaModalTitulo"
              aria-hidden="true">
 
-            <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
                 <div class="modal-content">
 
                     <div class="modal-header">
@@ -197,36 +199,98 @@ export function mostrarMascotas() {
                                 </div>
                             </div>
 
-                            <div class="mt-3">
-                                <label for="mascotaFechaNacimiento"
-                                       class="form-label">
-                                    Fecha de nacimiento *
-                                </label>
+                            <div class="row g-3 mt-1">
+                                <div class="col-md-6">
+                                    <label for="mascotaFechaNacimiento"
+                                           class="form-label">
+                                        Fecha de nacimiento *
+                                    </label>
 
-                                <input type="date"
-                                       id="mascotaFechaNacimiento"
-                                       class="form-control"
-                                       required>
+                                    <input type="date"
+                                           id="mascotaFechaNacimiento"
+                                           class="form-control"
+                                           required>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label for="mascotaSexo"
+                                           class="form-label">
+                                        Sexo *
+                                    </label>
+
+                                    <select id="mascotaSexo"
+                                            class="form-select"
+                                            required>
+                                        <option value="">Seleccioná el sexo</option>
+                                        <option value="MACHO">Macho</option>
+                                        <option value="HEMBRA">Hembra</option>
+                                    </select>
+                                </div>
                             </div>
 
-                            <div class="mt-3">
-                                <label for="mascotaCliente"
+                            <div class="row g-3 mt-1">
+                                <div class="col-md-6">
+                                    <label for="mascotaCliente"
+                                           class="form-label">
+                                        Propietario *
+                                    </label>
+
+                                    <select id="mascotaCliente"
+                                            class="form-select"
+                                            required>
+                                        <option value="">
+                                            Seleccioná un propietario
+                                        </option>
+                                    </select>
+
+                                    <div class="form-text">
+                                        El propietario debe estar registrado
+                                        previamente en Clientes.
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6 d-flex align-items-center">
+                                    <div class="form-check mt-3">
+                                        <input type="checkbox"
+                                               id="mascotaEsterilizado"
+                                               class="form-check-input">
+                                        <label for="mascotaEsterilizado"
+                                               class="form-check-label fw-medium">
+                                            Esterilizado / castrado
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <hr class="my-4">
+
+                            <h6 class="fw-semibold mb-3">
+                                <i class="bi bi-clipboard2-heart me-1 text-danger"></i>
+                                Antecedentes clínicos (opcionales)
+                            </h6>
+
+                            <div class="mb-3">
+                                <label for="mascotaAlergias"
                                        class="form-label">
-                                    Propietario *
+                                    Alergias conocidas
                                 </label>
 
-                                <select id="mascotaCliente"
-                                        class="form-select"
-                                        required>
-                                    <option value="">
-                                        Seleccioná un propietario
-                                    </option>
-                                </select>
+                                <textarea id="mascotaAlergias"
+                                          class="form-control"
+                                          rows="2"
+                                          placeholder="Ej. Alergia a pulgas, penicilina, pollo..."></textarea>
+                            </div>
 
-                                <div class="form-text">
-                                    El propietario debe estar registrado
-                                    previamente en Clientes.
-                                </div>
+                            <div>
+                                <label for="mascotaCondiciones"
+                                       class="form-label">
+                                    Condiciones crónicas / enfermedades
+                                </label>
+
+                                <textarea id="mascotaCondiciones"
+                                          class="form-control"
+                                          rows="2"
+                                          placeholder="Ej. Insuficiencia renal, epilepsia, displasia..."></textarea>
                             </div>
 
                         </div>
@@ -263,14 +327,12 @@ function fechaActualLocal() {
     return ahora.toISOString().slice(0, 10);
 }
 
-function formatearFecha(fecha) {
-    if (!fecha) return "—";
-
-    const partes = fecha.split("-");
-
-    if (partes.length !== 3) return fecha;
-
-    return `${partes[2]}/${partes[1]}/${partes[0]}`;
+function formatearSexo(sexo) {
+    if (!sexo) return "—";
+    const normalizado = String(sexo).toUpperCase();
+    if (normalizado === "MACHO") return "Macho";
+    if (normalizado === "HEMBRA") return "Hembra";
+    return sexo;
 }
 
 function mostrarMensaje(mensaje, tipo = "success") {
@@ -552,20 +614,39 @@ function renderizarMascotas() {
                 ? `${cliente.nombre} ${cliente.apellido}`
                 : `Cliente #${mascota.clienteId}`);
 
+        const tieneAlerta = Boolean(
+            mascota.alergiasConocidas?.trim() || mascota.condicionesCronicas?.trim()
+        );
+
         return `
             <tr>
                 <td>
                     <div class="d-flex align-items-center gap-2">
                         ${renderizarMiniaturaMascota(mascota)}
-                        <span class="fw-medium">${escaparHTML(mascota.nombre)}</span>
+                        <div>
+                            <div class="fw-medium">
+                                ${escaparHTML(mascota.nombre)}
+                                ${
+                                    tieneAlerta
+                                        ? `<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle ms-1" title="Tiene antecedentes clínicos">
+                                               <i class="bi bi-exclamation-circle"></i>
+                                           </span>`
+                                        : ""
+                                }
+                            </div>
+                        </div>
                     </div>
                 </td>
 
                 <td>${escaparHTML(mascota.especie)}</td>
                 <td>${escaparHTML(mascota.raza)}</td>
-                <td>${escaparHTML(
-                    formatearFecha(mascota.fechaNacimiento)
-                )}</td>
+
+                <td>
+                    <span class="small">${escaparHTML(formatearSexo(mascota.sexo))}</span>
+                    <span class="badge ${mascota.esterilizado ? "bg-info-subtle text-info-emphasis" : "bg-secondary-subtle text-secondary-emphasis"} ms-1">
+                        ${mascota.esterilizado ? "Esterilizado" : "Sin esterilizar"}
+                    </span>
+                </td>
 
                 <td>${escaparHTML(propietario)}</td>
 
@@ -623,6 +704,18 @@ function abrirFormularioMascota(mascota = null) {
     document.getElementById("mascotaFechaNacimiento").max =
         fechaActualLocal();
 
+    document.getElementById("mascotaSexo").value =
+        mascota?.sexo ?? "";
+
+    document.getElementById("mascotaEsterilizado").checked =
+        Boolean(mascota?.esterilizado);
+
+    document.getElementById("mascotaAlergias").value =
+        mascota?.alergiasConocidas ?? "";
+
+    document.getElementById("mascotaCondiciones").value =
+        mascota?.condicionesCronicas ?? "";
+
     document.getElementById("mascotaCliente").value =
         mascota?.clienteId != null
             ? String(mascota.clienteId)
@@ -645,6 +738,16 @@ async function guardarMascota(evento) {
 
     const clienteId =
         document.getElementById("mascotaCliente").value;
+    const sexo =
+        document.getElementById("mascotaSexo").value;
+    const alergiasTexto =
+        document.getElementById("mascotaAlergias").value.trim();
+    const condicionesTexto =
+        document.getElementById("mascotaCondiciones").value.trim();
+
+    const mascotaExistente = id
+        ? mascotas.find(item => String(item.id) === String(id))
+        : null;
 
     const mascota = {
         nombre: document.getElementById("mascotaNombre").value.trim(),
@@ -652,7 +755,14 @@ async function guardarMascota(evento) {
         raza: document.getElementById("mascotaRaza").value.trim(),
         fechaNacimiento:
             document.getElementById("mascotaFechaNacimiento").value,
-        clienteId: Number(clienteId)
+        clienteId: Number(clienteId),
+        fotoUrl: mascotaExistente?.fotoUrl ?? null,
+        sexo,
+        esterilizado: Boolean(
+            document.getElementById("mascotaEsterilizado").checked
+        ),
+        alergiasConocidas: alergiasTexto || null,
+        condicionesCronicas: condicionesTexto || null
     };
 
     if (
@@ -660,10 +770,23 @@ async function guardarMascota(evento) {
         !mascota.especie ||
         !mascota.raza ||
         !mascota.fechaNacimiento ||
+        !mascota.sexo ||
         !clienteId
     ) {
         mostrarMensaje(
             "Completá todos los campos obligatorios.",
+            "warning"
+        );
+        return;
+    }
+
+    if (
+        !REGEX_SOLO_LETRAS.test(mascota.nombre) ||
+        !REGEX_SOLO_LETRAS.test(mascota.especie) ||
+        !REGEX_SOLO_LETRAS.test(mascota.raza)
+    ) {
+        mostrarMensaje(
+            "El nombre, la especie y la raza solo pueden contener letras y espacios.",
             "warning"
         );
         return;
